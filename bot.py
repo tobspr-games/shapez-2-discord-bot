@@ -727,7 +727,7 @@ def runDiscordBot() -> None:
                     return
                 if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
 
-                    roleList = (await guildSettings.getGuildSettings(interaction.guild_id))[guildSettingsKey]
+                    roleList = (await guildSettings.getGuildSettings(interaction.guild_id))[guildSettingsKey].copy()
 
                     if (operation in ("add","remove")) and (role is None):
                         responseMsg = "A role must be provided when using the 'add' or 'remove' subcommand"

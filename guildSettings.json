@@ -1,0 +1,25 @@
+{
+    "1131614768835350709": {
+        "adminRoles": [],
+        "paused": false,
+        "restrictToChannel": null,
+        "restrictToRoles": [],
+        "restrictToRolesInverted": false,
+        "usageCooldown": 5,
+        "antispamEnabled": true,
+        "antispamAlertChannel": 1132693034673389659
+    },
+    "1000343719314198548": {
+        "adminRoles": [
+            1000345864818151477,
+            1001052720955916298
+        ],
+        "paused": false,
+        "restrictToChannel": null,
+        "restrictToRoles": [],
+        "restrictToRolesInverted": false,
+        "usageCooldown": 5,
+        "antispamEnabled": true,
+        "antispamAlertChannel": 1000352074426499182
+    }
+}

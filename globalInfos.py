@@ -13,7 +13,6 @@ RESTRICT_TO_GUILDS = [ # 'None' alone : enable everywhere, 'None' in the list : 
 
 # guild settings
 GUILD_SETTINGS_PATH = "./guildSettings.json"
-GUILD_SETTINGS_ENV_VAR = "fsb2_guildSettings"
 MAX_ROLES_PER_LIST = 10
 
 # texts

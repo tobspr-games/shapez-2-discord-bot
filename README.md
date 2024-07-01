@@ -94,6 +94,8 @@ If you have the blueprint code as text, paste it in the 'blueprint' parameter. I
 
 ### Admin commands
 
+Important note : guild settings currently can't be modified so most of the commands below won't have any effect
+
 - Pausing :\
   While paused, the bot will not send any public messages on the server
   - /set-paused [value] : Sets if the bot should be paused

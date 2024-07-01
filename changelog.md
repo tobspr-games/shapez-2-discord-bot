@@ -6,6 +6,8 @@
   - Remove `.dockerignore`, `Dockerfile`
   - Make token and guild settings able to use environment variables if files for them aren't found
 
+- Make guild settings hardcoded
+
 ## 30 Jun 24
 - Fix error when decoding island blueprint containing buildings
 - Fix error when using /blueprint-creator item-producer-w-shape

@@ -1,6 +1,6 @@
 import globalInfos
 import json
-import os
+# import os
 
 _SETTINGS_DEFAULTS = {
     "adminRoles" : [],
@@ -17,14 +17,16 @@ _guildSettings:dict[int,dict[str,propertyTypes]]
 
 def _saveSettings() -> None:
 
-    if _storageMode == "file":
+    # if _storageMode == "file":
 
-        with open(globalInfos.GUILD_SETTINGS_PATH,"w",encoding="utf-8") as f:
-            json.dump(_guildSettings,f,ensure_ascii=True,separators=(",",":"))
+    #     with open(globalInfos.GUILD_SETTINGS_PATH,"w",encoding="utf-8") as f:
+    #         json.dump(_guildSettings,f,ensure_ascii=True,separators=(",",":"))
 
-    else:
+    # else:
 
-        os.environ[globalInfos.GUILD_SETTINGS_ENV_VAR] = json.dumps(_guildSettings,ensure_ascii=False,separators=(",",":"))
+    #     os.environ[globalInfos.GUILD_SETTINGS_ENV_VAR] = json.dumps(_guildSettings,ensure_ascii=False,separators=(",",":"))
+
+    pass
 
 def _createGuildDefaults(guildId:int) -> None:
 
@@ -46,31 +48,31 @@ def _createGuildDefaults(guildId:int) -> None:
 
 def _load() -> None:
 
-    global _guildSettings, _storageMode
+    global _guildSettings #, _storageMode
 
-    try:
+    # try:
 
-        with open(globalInfos.GUILD_SETTINGS_PATH,encoding="utf-8") as f:
-            _guildSettings = json.load(f)
+    with open(globalInfos.GUILD_SETTINGS_PATH,encoding="utf-8") as f:
+        _guildSettings = json.load(f)
 
-        _storageMode = "file"
-        print("Using file settings")
+    # _storageMode = "file"
+    # print("Using file settings")
 
-    except FileNotFoundError:
+    # except FileNotFoundError:
 
-        _storageMode = "envvar"
-        print("Using envvar settings")
+    #     _storageMode = "envvar"
+    #     print("Using envvar settings")
 
-        guildSettingsStr = os.getenv(globalInfos.GUILD_SETTINGS_ENV_VAR)
+    #     guildSettingsStr = os.getenv(globalInfos.GUILD_SETTINGS_ENV_VAR)
     
-        if guildSettingsStr is None:
+    #     if guildSettingsStr is None:
 
-            _guildSettings = {}
-            _saveSettings()
+    #         _guildSettings = {}
+    #         _saveSettings()
 
-        else:
+    #     else:
 
-            _guildSettings = json.loads(guildSettingsStr)
+    #         _guildSettings = json.loads(guildSettingsStr)
 
     _guildSettings = {int(k) : v for k,v in _guildSettings.items()}
 
@@ -79,9 +81,11 @@ _load()
 # doesn't need to be async but kept just in case
 async def setGuildSetting(guildId:int,property:str,value:propertyTypes) -> None:
 
-    _createGuildDefaults(guildId)
-    _guildSettings[guildId][property] = value
-    _saveSettings()
+    # _createGuildDefaults(guildId)
+    # _guildSettings[guildId][property] = value
+    # _saveSettings()
+
+    pass
 
 async def getGuildSettings(guildId:int) -> dict[str,propertyTypes]:
 
