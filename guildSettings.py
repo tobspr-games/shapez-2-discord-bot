@@ -24,7 +24,7 @@ def _saveSettings() -> None:
 
     else:
 
-        os.putenv(globalInfos.GUILD_SETTINGS_ENV_VAR,json.dumps(_guildSettings,ensure_ascii=False,separators=(",",":")))
+        os.environ[globalInfos.GUILD_SETTINGS_ENV_VAR] = json.dumps(_guildSettings,ensure_ascii=False,separators=(",",":"))
 
 def _createGuildDefaults(guildId:int) -> None:
 
@@ -54,10 +54,12 @@ def _load() -> None:
             _guildSettings = json.load(f)
 
         _storageMode = "file"
+        print("Using file settings")
 
     except FileNotFoundError:
 
         _storageMode = "envvar"
+        print("Using envvar settings")
 
         guildSettingsStr = os.getenv(globalInfos.GUILD_SETTINGS_ENV_VAR)
     
