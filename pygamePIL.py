@@ -1,3 +1,8 @@
+# The bot was originally developed with pygame, to convert it to using Pillow,
+# I created this interface which copies the pygame functions and classes used in the bot
+# to not have to change the code too much, although as a result, some functions might not be
+# as efficient as if they were done with Pillow directly
+
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont

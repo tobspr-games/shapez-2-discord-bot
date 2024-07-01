@@ -1,4 +1,4 @@
-# Fake ShapeBot 2
+# ShapeBot 2
 
 ## Shape viewer
 
@@ -77,7 +77,7 @@ If you have the blueprint code as text, paste it in the 'blueprint' parameter. I
 
 - /member-count : Displays the member count of the server it is executed in (with additional info such as online/offline count and percentage)
 
-- /operation-graph [instructions] [public=False] [see_shape_vars=False] [spoiler=False] [color_skin=RGB] : See the [/operation-graph documentation](https://github.com/Loupau38/Fake-ShapeBot-2.0/blob/main/operationGraphDoc.md)
+- /operation-graph [instructions] [public=False] [see_shape_vars=False] [spoiler=False] [color_skin=RGB] : See the [/operation-graph documentation](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/operationGraphDoc.md)
 
 - /blueprint-info [blueprint] [advanced=False] [blueprint_file=None] : Will give the version, type, blueprint cost, platform unit cost, building count, building scale size, building tile count, platform count, platform scale size, platform tile count and icons of the given blueprint. If 'advanced' is set to True, will also give the individual counts for every building and platforms
 
