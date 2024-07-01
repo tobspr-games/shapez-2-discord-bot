@@ -143,4 +143,4 @@ Important note : guild settings currently can't be modified so most of the comma
 - If a message contains one attachment and it's a screenshot containing the debug menu, the bot will send a message informing how to close that menu
 - Port of sbe's antispam : if a user sends 4 times in a row the same message in the same server at max 10 seconds interval, the bot will time them out for an hour and the messages in question will be deleted
 
-[Changelog](https://github.com/Loupau38/Fake-ShapeBot-2.0/blob/main/changelog.md)
+[Changelog](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/changelog.md)
