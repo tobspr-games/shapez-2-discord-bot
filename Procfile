@@ -1,1 +1,1 @@
-worker: python testPillow.py
+web: python main.py
