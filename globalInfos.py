@@ -1,7 +1,6 @@
 # bot itself
 TOKEN_PATH = "./token.txt"
 TOKEN_ENV_VAR = "fsb2_token"
-BOT_ID = 1131514655404199936
 
 # owner only features
 OWNER_USERS = [579288989505421349]

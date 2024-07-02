@@ -21,15 +21,18 @@ import io
 import typing
 import datetime
 
-async def globalLogMessage(message:str) -> None:
+async def globalLogMessage(message:str,sendInCodeBlock:bool=False) -> None:
     if globalInfos.GLOBAL_LOG_CHANNEL is None:
         print(message)
     else:
         logChannel = client.get_channel(globalInfos.GLOBAL_LOG_CHANNEL)
-        await logChannel.send(**getCommandResponse(message,None,logChannel.guild,True,("```","```")))
+        await logChannel.send(**getCommandResponse(
+            message,None,logChannel.guild,True,
+            ("```","```") if sendInCodeBlock else ("","")
+        ))
 
 async def globalLogError() -> None:
-    await globalLogMessage(("".join(traceback.format_exception(*sys.exc_info())))[:-1])
+    await globalLogMessage(("".join(traceback.format_exception(*sys.exc_info())))[:-1],True)
 
 async def useShapeViewer(userMessage:str,sendErrors:bool) -> tuple[bool,str,tuple[discord.File,int]|None]:
     try:
@@ -326,6 +329,8 @@ def getCommandResponse(text:str,file:tuple[discord.File,int]|None,guild:discord.
 # port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
 async def antiSpam(message:discord.Message) -> None|bool:
 
+    global antiSpamLastMessages
+
     async def sendAlert() -> None:
 
         curAlertChannel = curGuildSettings["antispamAlertChannel"]
@@ -342,8 +347,6 @@ async def antiSpam(message:discord.Message) -> None|bool:
             alertMsg += " <couldn't put message content in a file>"
 
         await curAlertChannel.send(alertMsg,file=msgContentFile)
-
-    global antiSpamLastMessages
 
     if globalPaused:
         return
@@ -390,8 +393,10 @@ async def antiSpam(message:discord.Message) -> None|bool:
                     for msg in messages: # port difference : only delete if permission to timeout
                         await msg.delete()
 
-                except (discord.Forbidden,discord.NotFound):
-                    pass
+                except (discord.Forbidden,discord.NotFound) as e:
+                    await globalLogMessage(
+                        f"Failed to timeout user ({message.author.id}) or delete messages for antispam ({e.__class__.__name__})"
+                    )
 
                 else:
                     await sendAlert()
@@ -612,7 +617,7 @@ def runDiscordBot() -> None:
             if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 
                 # equivalent of a /ping
-                if globalInfos.BOT_ID in (user.id for user in message.mentions):
+                if client.user.id in (user.id for user in message.mentions):
                     await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
 
                 # blueprint version reaction

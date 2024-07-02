@@ -1,3 +1,8 @@
+## 02 Jul 24
+- Add log message if antispam fails
+- Remove bot id constant in global infos
+- Make code block usage optional in global message logging
+
 ## 01 Jul 24
 - Switch to using Pillow instead of pygame
 
