@@ -7,7 +7,10 @@
         "restrictToRolesInverted": false,
         "usageCooldown": 5,
         "antispamEnabled": true,
-        "antispamAlertChannel": 1132693034673389659
+        "antispamAlertChannel": 1132693034673389659,
+        "blueprintsChannels": [
+            1131614769279930460
+        ]
     },
     "1000343719314198548": {
         "adminRoles": [
@@ -20,6 +23,9 @@
         "restrictToRolesInverted": false,
         "usageCooldown": 5,
         "antispamEnabled": true,
-        "antispamAlertChannel": 1000352074426499182
+        "antispamAlertChannel": 1000352074426499182,
+        "blueprintsChannels": [
+            1093933544025358436
+        ]
     }
 }

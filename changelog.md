@@ -1,3 +1,10 @@
+## 03 Jul 24
+- Make bot send part of the /access-blueprint command response as a regular message if a blueprint is posted in a blueprints channel
+  - Move part of /access-blueprint command code in its own function
+  - Move code to get a single potential blueprint in a message in its own function
+  - Add 'blueprintsChannels' guild setting
+- Prevent errors if attempting to react to a deleted message
+
 ## 02 Jul 24
 - Add log message if antispam fails
 - Remove bot id constant in global infos

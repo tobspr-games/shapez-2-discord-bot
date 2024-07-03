@@ -10,7 +10,8 @@ _SETTINGS_DEFAULTS = {
     "restrictToRolesInverted" : False,
     "usageCooldown" : 0,
     "antispamEnabled" : True,
-    "antispamAlertChannel" : None
+    "antispamAlertChannel" : None,
+    "blueprintsChannels" : [] # no command to modify this currently
 }
 propertyTypes = list|bool|None|int
 _guildSettings:dict[int,dict[str,propertyTypes]]
