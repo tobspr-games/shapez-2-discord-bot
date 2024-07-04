@@ -1,3 +1,6 @@
+## 04 Jul 24
+- Fix antispam not respecting the restric to servers constant
+
 ## 03 Jul 24
 - Make bot send part of the /access-blueprint command response as a regular message if a blueprint is posted in a blueprints channel
   - Move part of /access-blueprint command code in its own function
