@@ -449,7 +449,7 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
             "Less",
             "LessEqual",
             "NotEqual"
-        ][compareMode+1]
+        ][compareMode-1]
 
     if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
         if len(rawDecoded) < 4:

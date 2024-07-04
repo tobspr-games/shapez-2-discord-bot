@@ -1,7 +1,9 @@
 ## 04 Jul 24
-- Fix antispam not respecting the restric to servers constant
+- Fix antispam not respecting the restrict to servers constant
 
 - Make /access-blueprint response try to send some parts of message via text and some via files when the complete text is too big
+
+- Fix error when decoding a blueprint containing a compararison gate set to 'LessEqual' or 'NotEqual'
 
 ## 03 Jul 24
 - Make bot send part of the /access-blueprint command response as a regular message if a blueprint is posted in a blueprints channel
