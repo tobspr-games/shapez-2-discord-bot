@@ -508,26 +508,33 @@ def getAccessBPTextAndFiles(
 ) -> tuple[str,list[discord.File]]:
 
     infoText = getBPInfoText(blueprint,False)
-    infoText = "\n".join(f"> {l}" for l in infoText.split("\n"))
+    infoTextFormatted = "**Blueprint Infos :**\n" + "\n".join(f"> {l}" for l in infoText.split("\n"))
 
     bpCodeLinkSafe = blueprintCode
     for old,new in globalInfos.LINK_CHAR_REPLACEMENT.items():
         bpCodeLinkSafe = bpCodeLinkSafe.replace(old,new)
     bpCode3dViewLink = f"{globalInfos.BLUEPRINT_3D_VIEWER_LINK_START}{bpCodeLinkSafe}"
+    bpCode3dViewLinkFormatted = f"**Actions :**\n> [[View in 3D]](<{bpCode3dViewLink}>)"
 
-    responseMsg = "\n".join([
-        "**Blueprint Infos :**",
-        infoText,
-        "**Actions :**",
-        f"> [[View in 3D]](<{bpCode3dViewLink}>)"
-    ])
+    responseMsg = infoTextFormatted + "\n" + bpCode3dViewLinkFormatted
 
     toCreateFiles:list[tuple[str,str]] = []
 
     if len(responseMsg) > globalInfos.MESSAGE_MAX_LENGTH:
-        toCreateFiles.append((infoText,"blueprint infos.txt"))
-        toCreateFiles.append((bpCode3dViewLink,"3D viewer link.txt"))
-        responseMsg = ""
+        if len(infoTextFormatted) <= globalInfos.MESSAGE_MAX_LENGTH:
+            responseMsg = infoTextFormatted
+            toCreateFiles.append((bpCode3dViewLink,"3D viewer link.txt"))
+        elif len(bpCode3dViewLinkFormatted) <= globalInfos.MESSAGE_MAX_LENGTH:
+            responseMsg = bpCode3dViewLinkFormatted
+            toCreateFiles.append((infoText,"blueprint infos.txt"))
+        else:
+            responseMsg = ""
+            toCreateFiles.append(("\n".join([
+                "Blueprint Infos :",
+                infoText,
+                "3D Viewer Link :",
+                bpCode3dViewLink
+            ]),"blueprint infos.txt"))
 
     if formatConversionFiles:
         toCreateFiles.append((blueprintCode,"blueprint.txt"))
