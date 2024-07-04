@@ -357,7 +357,7 @@ async def antiSpam(message:discord.Message) -> None|bool:
     if message.guild is None:
         return
 
-    if isDisabledInGuild(message.guild):
+    if isDisabledInGuild(message.guild.id):
         return
 
     curGuildSettings = await guildSettings.getGuildSettings(message.guild.id)
