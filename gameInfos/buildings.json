@@ -1,5 +1,5 @@
 {
-    "GameVersion": 99999,
+    "GameVersion": 1082,
     "Buildings": [
         {
             "Id": "BeltDefaultVariant",
@@ -159,13 +159,13 @@
                         },
                         {
                             "X": 0,
-                            "Y": -1,
-                            "Z": 0
+                            "Y": 0,
+                            "Z": 1
                         },
                         {
                             "X": 0,
-                            "Y": -1,
-                            "Z": 1
+                            "Y": 1,
+                            "Z": 0
                         }
                     ]
                 },
@@ -179,13 +179,13 @@
                         },
                         {
                             "X": 0,
-                            "Y": 1,
-                            "Z": 0
+                            "Y": 0,
+                            "Z": 1
                         },
                         {
                             "X": 0,
-                            "Y": 1,
-                            "Z": 1
+                            "Y": -1,
+                            "Z": 0
                         }
                     ]
                 }
@@ -941,12 +941,12 @@
                     "Tiles": [
                         {
                             "X": 0,
-                            "Y": -1,
+                            "Y": 0,
                             "Z": 0
                         },
                         {
                             "X": 0,
-                            "Y": 0,
+                            "Y": 1,
                             "Z": 0
                         }
                     ]
@@ -956,12 +956,12 @@
                     "Tiles": [
                         {
                             "X": 0,
-                            "Y": 1,
+                            "Y": 0,
                             "Z": 0
                         },
                         {
                             "X": 0,
-                            "Y": 0,
+                            "Y": -1,
                             "Z": 0
                         }
                     ]
@@ -1439,6 +1439,41 @@
                 {
                     "Id": "VirtualHalfCutterDefaultInternalVariant",
                     "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "VirtualHalvesSwapperDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "VirtualHalvesSwapperDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": -1,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                },
+                {
+                    "Id": "VirtualHalvesSwapperDefaultInternalVariantMirrored",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 1,
+                            "Z": 0
+                        },
                         {
                             "X": 0,
                             "Y": 0,

@@ -162,7 +162,7 @@ class IslandEntry:
         _omitKeyIfDefault(toReturn,"X",self.pos.x)
         _omitKeyIfDefault(toReturn,"Y",self.pos.y)
         _omitKeyIfDefault(toReturn,"R",self.rotation.value)
-        _omitKeyIfDefault(toReturn,"C",_encodeEntryExtraData(self.extra,self.type.id,True))
+        _omitKeyIfDefault(toReturn,"C",_encodeEntryExtraData(self.extra,self.type.id,True),("AA==",))
         if self.buildingBP is not None:
             toReturn["B"] = self.buildingBP._encode()
         return toReturn
@@ -270,8 +270,8 @@ def _genericGetCounts(bp:BuildingBlueprint|IslandBlueprint) -> dict[str,int]:
             output[entryType] += 1
     return output
 
-def _omitKeyIfDefault(dict:dict,key:str,value:int|str) -> None:
-    if value not in (0,""):
+def _omitKeyIfDefault(dict:dict,key:str,value:int|str,defaults:tuple[typing.Any,...]=(0,"")) -> None:
+    if value not in defaults:
         dict[key] = value
 
 def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
@@ -301,7 +301,7 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
             raise BlueprintError("First two bytes of shape generation string aren't '\\x01'")
 
         shapeCode = standardDecode(rawString[2:],True)
-        error, valid = shapeCodeGenerator.isShapeCodeValid(shapeCode,True)
+        error, valid = shapeCodeGenerator.isShapeCodeValid(shapeCode,None,True)
 
         if not valid:
             raise BlueprintError(f"Invalid shape code : {error}")
@@ -452,11 +452,15 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
         ][compareMode-1]
 
     if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
-        if len(rawDecoded) < 4:
-            raise BlueprintError("String must be at least 4 bytes long")
+        isReceiver = entryType == BUILDING_IDS["wireGlobalReceiver"]
+        stringLen = 5 if isReceiver else 4
+        if len(rawDecoded) < stringLen:
+            raise BlueprintError(f"String must be at least {stringLen} bytes long")
         channel = int.from_bytes(rawDecoded[:4],"little",signed=True)
         if channel < 0:
             raise BlueprintError("Wire transmitter channel can't be negative")
+        if isReceiver:
+            return rawDecoded[4] == 1, channel
         return channel
 
     if (
@@ -559,7 +563,13 @@ def _encodeEntryExtraData(extra:typing.Any,entryType:str,isIsland:bool) -> str:
         }[extra]]))
 
     if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
-        return b64encode(extra.to_bytes(4,"little",signed=True))
+        if entryType == BUILDING_IDS["wireGlobalReceiver"]:
+            extraExtra, channel = extra
+            extraExtra = bytes([1]) if extraExtra else bytes([2])
+        else:
+            channel = extra
+            extraExtra = b""
+        return b64encode(channel.to_bytes(4,"little",signed=True)+extraExtra)
 
     if (
         (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"],ISLAND_IDS["rail"]))
@@ -596,8 +606,11 @@ def _getDefaultEntryExtraData(entryType:str) -> typing.Any:
     if entryType == BUILDING_IDS["compareGate"]:
         return "Equal"
 
-    if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
+    if entryType == BUILDING_IDS["wireGlobalSender"]:
         return 0
+
+    if entryType == BUILDING_IDS["wireGlobalReceiver"]:
+        return (False,0)
 
     if (
         (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"],ISLAND_IDS["rail"]))
@@ -606,7 +619,7 @@ def _getDefaultEntryExtraData(entryType:str) -> typing.Any:
         return {
             "type" : 1,
             "layout" : bytes([0,0]) + (
-                bytes([7,0,0,0])
+                bytes([15,0,0,0])
                 if (entryType == ISLAND_IDS["rail"]) or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA) else
                 bytes()
             )
@@ -815,7 +828,7 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
                 "T" : t
             }
 
-            c = _getKeyValue(entry,"C",str,"")
+            c = _getKeyValue(entry,"C",str,"AA==" if bpType == ISLAND_BP_TYPE else "")
             try:
                 c = _decodeEntryExtraData(c,t,bpType == ISLAND_BP_TYPE)
             except BlueprintError as e:

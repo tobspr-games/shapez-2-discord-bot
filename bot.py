@@ -1235,13 +1235,14 @@ def runDiscordBot() -> None:
                 if not valid:
                     responseMsg = f"Invalid shape code : {shapeCodesOrError}"
                     return
+                shapeCodes = shapeCodesOrError[0]
 
-                shapeCodesLen = len(shapeCodesOrError)
+                shapeCodesLen = len(shapeCodes)
                 if shapeCodesLen != 1:
                     responseMsg = f"Not exactly one shape code returned ({shapeCodesLen})"
                     return
 
-                buildingExtra = {"type":"shape","value":shapeCodesOrError[0]}
+                buildingExtra = {"type":"shape","value":shapeCodes[0]}
 
                 try:
                     responseMsg = blueprints.encodeBlueprint(blueprints.Blueprint(

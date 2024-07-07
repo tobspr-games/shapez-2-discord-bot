@@ -116,11 +116,12 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
             shapeCodesOrError, isShapeCodeValid = shapeCodeGenerator.generateShapeCodes(shapeCode)
             if not isShapeCodeValid:
                 return False,OutputString("Error while decoding shape code : ",OutputString.UnsafeString(shapeCodesOrError))
+            shapeCodes = shapeCodesOrError[0]
 
-            if len(shapeCodesOrError) != len(shapeVarsInt):
-                return False,f"Number of shape codes outputed isn't the same as number of shape variables given ({len(shapeCodesOrError)} vs {len(shapeVarsInt)})"
+            if len(shapeCodes) != len(shapeVarsInt):
+                return False,f"Number of shape codes outputed isn't the same as number of shape variables given ({len(shapeCodes)} vs {len(shapeVarsInt)})"
 
-            return True,Instruction(Instruction.DEF,shapeVars=shapeVarsInt,shapeCodes=shapeCodesOrError)
+            return True,Instruction(Instruction.DEF,shapeVars=shapeVarsInt,shapeCodes=shapeCodes)
 
         if instruction.count(OPERATION_SEPARATOR) != 2:
             return False,f"Operation instruction must contain 2 '{OPERATION_SEPARATOR}'"

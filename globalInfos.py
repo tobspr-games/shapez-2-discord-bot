@@ -29,6 +29,8 @@ SHAPE_COLORS = ["u","r","g","b","c","m","y","w"]
 SHAPE_LAYER_SEPARATOR = ":"
 SHAPE_NOTHING_CHAR = "-"
 SHAPE_CHAR_REPLACEMENT = {} # unused but kept just in case
+SHAPE_CONFIG_QUAD = "quad"
+SHAPE_CONFIG_HEX = "hex"
 
 # display parameters
 SHAPES_PER_ROW = 8

@@ -7,11 +7,17 @@ Put your shape code and parameters in `{}`
 ### Shapes
 
 - Colorable :
-  - C : Circle
-  - R : Square/Rectangle
-  - S : Star/Spike
-  - W : Diamond
-  - c : Crystal
+  - Quad :
+    - C : Circle
+    - R : Square/Rectangle
+    - S : Star/Spike
+    - W : Diamond
+    - c : Crystal
+  - Hex :
+    - H : Hexagon
+    - F : Flower
+    - G : Gear
+    - c : Crystal
 - Uncolorable :
   - P : Pin
   - \- : Nothing
@@ -33,21 +39,21 @@ Put your shape code and parameters in `{}`
 Each parameter must have a `+` in front of it
 
 - +struct : Use `0` and `1` in your shape code and they will be replaced by nothing or a circle with the color depending on the layer
-- +fill : For each layer, if it contains one quadrant, that quadrant will be repeated 4 times, if two quadrants, they will be repeated 2 times
+- +fill : For each layer, if it contains 1 quadrant, that quadrant will be repeated 4 times, if 2 quadrants, they will be repeated 2 times
 - +lfill : Same as `fill` but with layers instead of quadrants
 - +cut : Will cut the shape in half and show the two resulting shapes
 - +qcut : Same as `cut` but will cut the shape in 4 instead of 2
 - +lsep : Will separate each layer of the shape
+- +hex : Indicates that the shape is in hexagonal mode, changing which shape types are considered valid and changing the behavior of +fill to 1 quadrant -> repeated 6 times, 2 -> 3, 3 -> 2
 
 Note : `cut` and `qcut` are mutually exclusive
 
 ### Additional features
 
-- If the shape code starts with either `level`, `lvl` or `m` followed by a number, it will produce the shape for the corresponding milestone
 - Shape expansion : Colorable shapes (like `C`) not followed by a color will have `u` appended (`Cu`), uncolorable shapes (like `P` or `-`) not followed by `-` will have `-` appended (`P-` or `--`)
 
 No matter in which order you put your parameters in your shape code, they will be executed in the following order :\
-milestone shapes, lfill, struct, shape expansion, fill, lsep, cut/qcut
+hex, lfill, struct, shape expansion, fill, lsep, cut/qcut
 
 ### Display parameters
 

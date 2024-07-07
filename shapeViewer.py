@@ -8,10 +8,14 @@ try:
     INITIAL_SHAPE_SIZE = globalInfos.INITIAL_SHAPE_SIZE
     SHAPE_NOTHING_CHAR = globalInfos.SHAPE_NOTHING_CHAR
     SHAPE_LAYER_SEPARATOR = globalInfos.SHAPE_LAYER_SEPARATOR
+    SHAPE_CONFIG_QUAD = globalInfos.SHAPE_CONFIG_QUAD
+    SHAPE_CONFIG_HEX = globalInfos.SHAPE_CONFIG_HEX
 except ModuleNotFoundError:
     INITIAL_SHAPE_SIZE = 500
     SHAPE_NOTHING_CHAR = "-"
     SHAPE_LAYER_SEPARATOR = ":"
+    SHAPE_CONFIG_QUAD = "quad"
+    SHAPE_CONFIG_HEX = "hex"
 
 SHAPE_BORDER_COLOR = (35,25,35)
 BG_CIRCLE_COLOR = (31,41,61,25)
@@ -94,6 +98,10 @@ COLORBLIND_NUM_PATTERNS = 13
 COLORBLIND_PATTERN_SPACING = (FAKE_SURFACE_SIZE) / (COLORBLIND_NUM_PATTERNS-1)
 COLORBLIND_PATTERN_WIDTH = COLORBLIND_PATTERN_SPACING * 0.25
 
+SQRT_2 = math.sqrt(2)
+SQRT_3 = math.sqrt(3)
+SQRT_6 = math.sqrt(6)
+
 def _preRenderColorblindPatterns() -> None:
 
     global _colorblindPatterns
@@ -153,7 +161,8 @@ def _drawQuadrant(
     quadIndex:int,
     layerIndex:int,
     layers:list[list[str]],
-    colorSkin:INTERNAL_COLOR_SKINS_ANNOTATION
+    colorSkin:INTERNAL_COLOR_SKINS_ANNOTATION,
+    shapeConfig:str
     ) -> tuple[pygamePIL.Surface|None,pygamePIL.Surface|None]:
     # returns quadrant with shadow, border
 
@@ -264,9 +273,82 @@ def _drawQuadrant(
 
         return quadSurface, quadSurfaceForBorder
 
+    if quadShape == "H":
+
+        points = [(0,0),((SQRT_3/2)*curQuadSize,curQuadSize/2),(0,curQuadSize)]
+        points = [(halfBorderSize+x,halfBorderSize+y) for x,y in points]
+
+        pygamePIL.draw_polygon(quadSurface,color,points) # main polygon
+
+        pygamePIL.draw_polygon(quadSurfaceForBorder,borderColor,points,borderSize) # border polygon
+        for point in points:
+            pygamePIL.draw_circle(quadSurfaceForBorder,borderColor,point,halfBorderSize-1) # fill in the missing vertices
+
+        return quadSurface, quadSurfaceForBorder
+
+    if quadShape == "F":
+
+        semicircleRadius = ((3-SQRT_3)/4) * curQuadSize
+        triangleSideLength = 2 * semicircleRadius
+        semicircleCenterX = (triangleSideLength*(SQRT_3/2)) / 2
+        semicircleCenterY = (
+            curQuadSize
+            - triangleSideLength
+            + math.sqrt((semicircleRadius*semicircleRadius)-(semicircleCenterX*semicircleCenterX))
+        )
+        trianglePoints = [
+            (0,curQuadSize-triangleSideLength),
+            ((SQRT_3/2)*triangleSideLength,curQuadSize-semicircleRadius),
+            (0,curQuadSize)
+        ]
+        semicircleStartAngle = math.radians(360-30)
+        semicircleStopAngle = math.radians(360-30-180)
+
+        semicircleCenterX += halfBorderSize
+        semicircleCenterY += halfBorderSize
+        trianglePoints = [(halfBorderSize+x,halfBorderSize+y) for x,y in trianglePoints]
+
+        pygamePIL.draw_polygon(quadSurface,color,trianglePoints) # triangle part
+
+        pygamePIL.draw_arc(quadSurface,color,pygamePIL.Rect( # semicircle part
+            semicircleCenterX-semicircleRadius,semicircleCenterY-semicircleRadius,triangleSideLength,triangleSideLength
+        ),semicircleStartAngle,semicircleStopAngle,math.ceil(semicircleRadius))
+
+        pygamePIL.draw_line(quadSurfaceForBorder,borderColor,trianglePoints[0],trianglePoints[2],borderSize) # left border
+
+        pygamePIL.draw_line(quadSurfaceForBorder,borderColor,trianglePoints[1],trianglePoints[2],borderSize) # bottom border
+
+        pygamePIL.draw_arc(quadSurfaceForBorder,borderColor,pygamePIL.Rect( # semicircle border
+            semicircleCenterX - semicircleRadius - halfBorderSize,
+            semicircleCenterY - semicircleRadius - halfBorderSize,
+            triangleSideLength + borderSize,
+            triangleSideLength + borderSize
+        ),semicircleStartAngle,semicircleStopAngle,borderSize)
+
+        for point in trianglePoints:
+            pygamePIL.draw_circle(quadSurfaceForBorder,borderColor,point,halfBorderSize-1) # fill in the missing vertices
+
+        return quadSurface, quadSurfaceForBorder
+
+    if quadShape == "G":
+
+        points = [(0,0),((SQRT_3/6)*curQuadSize,curQuadSize/2),((SQRT_3/2)*curQuadSize,curQuadSize/2),(0,curQuadSize)]
+        points = [(halfBorderSize+x,halfBorderSize+y) for x,y in points]
+
+        pygamePIL.draw_polygon(quadSurface,color,points) # main polygon
+
+        pygamePIL.draw_polygon(quadSurfaceForBorder,borderColor,points,borderSize) # border polygon
+        for point in points:
+            pygamePIL.draw_circle(quadSurfaceForBorder,borderColor,point,halfBorderSize-1) # fill in the missing vertices
+
+        return quadSurface, quadSurfaceForBorder
+
     if quadShape == "P":
 
-        pinCenter = (halfBorderSize+(curQuadSize/3),halfBorderSize+(2*(curQuadSize/3)))
+        if shapeConfig == SHAPE_CONFIG_QUAD:
+            pinCenter = (halfBorderSize+(curQuadSize/3),halfBorderSize+(2*(curQuadSize/3)))
+        elif shapeConfig == SHAPE_CONFIG_HEX:
+            pinCenter = (halfBorderSize+((SQRT_2/6)*curQuadSize),halfBorderSize+((1-(SQRT_6/6))*curQuadSize))
         pinRadius = curQuadSize/6
 
         if drawShadow:
@@ -359,7 +441,8 @@ def _rotateSurf(toRotate:pygamePIL.Surface,numQuads:int,quadIndex:int,layerIndex
     tempSurf = pygamePIL.transform_rotate(tempSurf,-((360/numQuads)*quadIndex))
     return tempSurf
 
-def renderShape(shapeCode:str,surfaceSize:int,colorSkin:EXTERNAL_COLOR_SKINS_ANNOTATION=EXTERNAL_COLOR_SKINS[0]) -> pygamePIL.Surface:
+def renderShape(shapeCode:str,surfaceSize:int,
+    colorSkin:EXTERNAL_COLOR_SKINS_ANNOTATION=EXTERNAL_COLOR_SKINS[0],shapeConfig:str=SHAPE_CONFIG_QUAD) -> pygamePIL.Surface:
 
     decomposedShapeCode = shapeCode.split(SHAPE_LAYER_SEPARATOR)
     numQuads = int(len(decomposedShapeCode[0])/2)
@@ -377,7 +460,8 @@ def renderShape(shapeCode:str,surfaceSize:int,colorSkin:EXTERNAL_COLOR_SKINS_ANN
 
         for quadIndex, quad in enumerate(layer):
 
-            quadSurface, quadBorder = _drawQuadrant(quad[0],quad[1],SHAPE_SIZE,quadIndex,layerIndex,decomposedShapeCode,curInternalColorSkin)
+            quadSurface, quadBorder = _drawQuadrant(quad[0],quad[1],SHAPE_SIZE,quadIndex,layerIndex,decomposedShapeCode,
+                curInternalColorSkin,shapeConfig)
             quadBorders.append(quadBorder)
 
             if quadSurface is None:

@@ -1,15 +1,25 @@
 import globalInfos
-import gameInfos
 import math
 
-COLOR_SHAPES = ["C","R","S","W","c"]
-NO_COLOR_SHAPES = ["P"]
+SHAPE_CONFIG_QUAD = globalInfos.SHAPE_CONFIG_QUAD
+SHAPE_CONFIG_HEX = globalInfos.SHAPE_CONFIG_HEX
+COLOR_SHAPES = {
+    SHAPE_CONFIG_QUAD : ["C","R","S","W","c"],
+    SHAPE_CONFIG_HEX : ["H","F","G","c"]
+}
+NO_COLOR_SHAPES = {
+    SHAPE_CONFIG_QUAD : ["P"],
+    SHAPE_CONFIG_HEX : ["P"]
+}
 COLORS = globalInfos.SHAPE_COLORS
 NOTHING_CHAR = globalInfos.SHAPE_NOTHING_CHAR
 COLOR_SHAPES_DEFAULT_COLOR = COLORS[0]
 NO_COLOR_SHAPES_DEFAULT_COLOR = NOTHING_CHAR
 STRUCT_COLORS = ["r","g","b","w"]
-STRUCT_SHAPE = "C"
+STRUCT_SHAPE = {
+    SHAPE_CONFIG_QUAD : "C",
+    SHAPE_CONFIG_HEX : "H"
+}
 
 PARAM_PREFIX = "+"
 DISPLAY_PARAM_PREFIX = "/"
@@ -19,7 +29,6 @@ SHAPE_CODE_OPENING = "{"
 SHAPE_CODE_CLOSING = "}"
 INGNORE_CHARS_IN_SHAPE_CODE = ["`"]
 
-LEVEL_SHAPE_PREFIXES = ["level","lvl","m"]
 
 def getPotentialShapeCodesFromMessage(message:str) -> list[str]:
     if (message == "") or (SHAPE_CODE_OPENING not in message):
@@ -61,25 +70,25 @@ def _separateInLayers(potentialShapeCode:str) -> tuple[str|list[str],bool]:
         layers = [potentialShapeCode]
     return layers,True
 
-def _verifyOnlyValidChars(layers:list[str]) -> tuple[str|None,bool]:
+def _verifyOnlyValidChars(layers:list[str],shapeConfig:str) -> tuple[str|None,bool]:
     for layerIndex,layer in enumerate(layers):
         for charIndex,char in enumerate(layer):
-            if char not in [*COLOR_SHAPES,*NO_COLOR_SHAPES,*COLORS,NOTHING_CHAR]:
+            if char not in [*COLOR_SHAPES[shapeConfig],*NO_COLOR_SHAPES[shapeConfig],*COLORS,NOTHING_CHAR]:
                 return f"Invalid char in layer {layerIndex+1} ({layer}), at char {charIndex+1} : '{char}'",False
     return None,True
 
-def _verifyShapesAndColorsInRightPos(layers:list[str]) -> tuple[str|None,bool]:
+def _verifyShapesAndColorsInRightPos(layers:list[str],shapeConfig:str) -> tuple[str|None,bool]:
     for layerIndex,layer in enumerate(layers):
         shapeMode = True
         lastChar = len(layer)-1
         for charIndex,char in enumerate(layer):
             errorMsgStart = f"Char in layer {layerIndex+1} ({layer}) at char {charIndex+1} ({char})"
             if shapeMode:
-                if char not in [*COLOR_SHAPES,*NO_COLOR_SHAPES,NOTHING_CHAR]:
+                if char not in [*COLOR_SHAPES[shapeConfig],*NO_COLOR_SHAPES[shapeConfig],NOTHING_CHAR]:
                     return f"{errorMsgStart} must be a shape or empty",False
                 if charIndex == lastChar:
                     return f"{errorMsgStart} should have a color but is end of layer",False
-                if char in [*NO_COLOR_SHAPES,NOTHING_CHAR]:
+                if char in [*NO_COLOR_SHAPES[shapeConfig],NOTHING_CHAR]:
                     nextMustBeColor = False
                 else:
                     nextMustBeColor = True
@@ -104,8 +113,11 @@ def _verifyAllLayersHaveSameLen(layers:list[str]) -> tuple[str|None,bool]:
 def _isShapeEmpty(layers:list[str]) -> bool:
     return all(all(c == NOTHING_CHAR for c in l) for l in layers)
 
-def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
-    """Returns (``[shapeCode0,shapeCode1,...]`` or ``errorMsg``), ``isShapeCodeValid``"""
+def generateShapeCodes(potentialShapeCode:str) -> tuple[tuple[list[str],str]|str,bool]:
+    """Returns (``([shapeCode0,shapeCode1,...], shapeConfig)`` or ``errorMsg``), ``isShapeCodeValid``"""
+
+    def getStructColor(layer:int) -> str:
+        return STRUCT_COLORS[min(layer,len(STRUCT_COLORS)-1)]
 
     for char in INGNORE_CHARS_IN_SHAPE_CODE:
         potentialShapeCode = potentialShapeCode.replace(char,"")
@@ -122,22 +134,10 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
     if cutInParams and qcutInParams:
         return "Mutualy exclusive 'cut' and 'qcut' parameters present",False
 
-    # handle level/milestone shapes
-    for prefix in LEVEL_SHAPE_PREFIXES:
-        if potentialShapeCode.startswith(prefix):
-            invalidLvl = False
-            level = potentialShapeCode.removeprefix(prefix)
-            try:
-                level = int(level)
-                if (level < 1) or (level > len(gameInfos.research.reserachTree)):
-                    invalidLvl = True
-            except ValueError:
-                invalidLvl = True
-            if invalidLvl:
-                return f"Invalid level/milestone number : '{level}'",False
-            level:int
-            potentialShapeCode = gameInfos.research.reserachTree[level-1].milestone.goalShape
-            break
+    hexInParams = "hex" in params
+    curShapeConfig = SHAPE_CONFIG_HEX if hexInParams else SHAPE_CONFIG_QUAD
+
+    structInParams = "struct" in params
 
     # separate in layers
     layersResult = _separateInLayers(potentialShapeCode)
@@ -149,20 +149,20 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
     if "lfill" in params:
         layersLen = len(layers)
         if layersLen == 1:
-            layers = [layers[0]]*4
+            layers = [layers[0]] * 4
         elif layersLen == 2:
-            layers = [layers[0],layers[1]]*2
+            layers = [layers[0],layers[1]] * 2
 
     # handle struct
-    if "struct" in params:
+    if structInParams:
         for i,layer in enumerate(layers):
             newLayer = ""
-            color = STRUCT_COLORS[min(i,len(STRUCT_COLORS)-1)]
+            color = getStructColor(i)
             for char in layer:
                 if char == "1":
-                    newLayer += STRUCT_SHAPE+color
+                    newLayer += STRUCT_SHAPE[curShapeConfig] + color
                 elif char == "0":
-                    newLayer += NOTHING_CHAR*2
+                    newLayer += NOTHING_CHAR * 2
                 else:
                     newLayer += char
             layers[i] = newLayer
@@ -173,7 +173,7 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
             layers[layerIndex] = layer.replace(old,new)
 
     # verify if only valid chars
-    validCharsResult = _verifyOnlyValidChars(layers)
+    validCharsResult = _verifyOnlyValidChars(layers,curShapeConfig)
     if not validCharsResult[1]:
         return validCharsResult[0],False
 
@@ -189,22 +189,22 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
                 continue
             expand = False
             isLastChar = charIndex == lastChar
-            if (char in COLOR_SHAPES) and ((isLastChar) or (layer[charIndex+1] not in COLORS)):
+            if (char in COLOR_SHAPES[curShapeConfig]) and ((isLastChar) or (layer[charIndex+1] not in COLORS)):
                 expand = True
-            elif (char in [*NO_COLOR_SHAPES,NOTHING_CHAR]) and ((isLastChar) or (layer[charIndex+1] != NOTHING_CHAR)):
+            elif (char in [*NO_COLOR_SHAPES[curShapeConfig],NOTHING_CHAR]) and ((isLastChar) or (layer[charIndex+1] != NOTHING_CHAR)):
                 expand = True
             if expand:
-                if char in [*NO_COLOR_SHAPES,NOTHING_CHAR]:
-                    newLayer += char+NO_COLOR_SHAPES_DEFAULT_COLOR
+                if char in [*NO_COLOR_SHAPES[curShapeConfig],NOTHING_CHAR]:
+                    newLayer += char + NO_COLOR_SHAPES_DEFAULT_COLOR
                 else:
-                    newLayer += char+COLOR_SHAPES_DEFAULT_COLOR
+                    newLayer += char + (getStructColor(layerIndex) if structInParams else COLOR_SHAPES_DEFAULT_COLOR)
             else:
                 skipNext = True
                 newLayer += char
         layers[layerIndex] = newLayer
 
     # verify if shapes and colors are in the right positions
-    shapesAndColorsInRightPosResult = _verifyShapesAndColorsInRightPos(layers)
+    shapesAndColorsInRightPosResult = _verifyShapesAndColorsInRightPos(layers,curShapeConfig)
     if not shapesAndColorsInRightPosResult[1]:
         return shapesAndColorsInRightPosResult[0],False
 
@@ -213,12 +213,22 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
         for layerIndex,layer in enumerate(layers):
             newLayer = ""
             layerLen = len(layer)
-            if layerLen == 2:
-                newLayer = layer*4
-            elif layerLen == 4:
-                newLayer = layer*2
+            if hexInParams:
+                if layerLen == 2:
+                    newLayer = layer * 6
+                elif layerLen == 4:
+                    newLayer = layer * 3
+                elif layerLen == 6:
+                    newLayer = layer * 2
+                else:
+                    newLayer = layer
             else:
-                newLayer = layer
+                if layerLen == 2:
+                    newLayer = layer * 4
+                elif layerLen == 4:
+                    newLayer = layer * 2
+                else:
+                    newLayer = layer
             layers[layerIndex] = newLayer
 
     # verify all layers have the same length
@@ -273,20 +283,29 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[list[str]|str,bool]:
         if not _isShapeEmpty(shape):
             noEmptyShapeCodes.append(globalInfos.SHAPE_LAYER_SEPARATOR.join(shape))
 
-    return noEmptyShapeCodes,True
+    return (noEmptyShapeCodes,curShapeConfig),True
 
-def isShapeCodeValid(potentialShapeCode:str,emptyShapeInvalid:bool=False) -> tuple[None|str,bool]:
+def isShapeCodeValid(potentialShapeCode:str,shapeConfig:str|None,emptyShapeInvalid:bool=False) -> tuple[None|str,bool]:
 
     layersResult = _separateInLayers(potentialShapeCode)
     if not layersResult[1]:
         return layersResult[0],False
     layers:list[str] = layersResult[0]
 
-    validCharsResult = _verifyOnlyValidChars(layers)
-    if not validCharsResult[1]:
-        return validCharsResult[0],False
+    if shapeConfig is None:
+        for testShapeConfig in (SHAPE_CONFIG_QUAD,SHAPE_CONFIG_HEX):
+            validCharsResult = _verifyOnlyValidChars(layers,testShapeConfig)
+            if validCharsResult[1]:
+                shapeConfig = testShapeConfig
+                break
+        if shapeConfig is None:
+            return validCharsResult[0],False
+    else:
+        validCharsResult = _verifyOnlyValidChars(layers,shapeConfig)
+        if not validCharsResult[1]:
+            return validCharsResult[0],False
 
-    shapesAndColorsInRightPosResult = _verifyShapesAndColorsInRightPos(layers)
+    shapesAndColorsInRightPosResult = _verifyShapesAndColorsInRightPos(layers,shapeConfig)
     if not shapesAndColorsInRightPosResult[1]:
         return shapesAndColorsInRightPosResult[0],False
 

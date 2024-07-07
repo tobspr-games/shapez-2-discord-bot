@@ -74,14 +74,14 @@ def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],b
     if potentialShapeCodes == []:
         return
 
-    shapeCodes:list[str] = []
+    shapeCodes:list[tuple[str,str]] = []
     hasAtLeastOneInvalidShapeCode = False
     errorMsgs = []
 
     for i,code in enumerate(potentialShapeCodes):
         shapeCodesOrError, isShapeCodeValid = shapeCodeGenerator.generateShapeCodes(code)
         if isShapeCodeValid:
-            shapeCodes.extend(shapeCodesOrError)
+            shapeCodes.extend((shape,shapeCodesOrError[1]) for shape in shapeCodesOrError[0])
         else:
             errorMsgs.append(f"Invalid shape code for shape {i+1} : {shapeCodesOrError}")
             hasAtLeastOneInvalidShapeCode = True
@@ -113,14 +113,14 @@ def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],b
     renderedShapesCache = {}
     for i,code in enumerate(shapeCodes):
         if renderedShapesCache.get(code) is None:
-            renderedShapesCache[code] = shapeViewer.renderShape(code,size,curDisplayParams["colors"])
+            renderedShapesCache[code] = shapeViewer.renderShape(code[0],size,curDisplayParams["colors"],code[1])
         divMod = divmod(i,globalInfos.SHAPES_PER_ROW)
         finalImage.blit(renderedShapesCache[code],(size*divMod[1],size*divMod[0]))
 
     viewer3dLinks = None
     if curDisplayParams["3d"]:
         viewer3dLinks = []
-        for code in shapeCodes:
+        for code,_ in shapeCodes:
             linkSafeCode = code
             for old,new in globalInfos.LINK_CHAR_REPLACEMENT.items():
                 linkSafeCode = linkSafeCode.replace(old,new)
@@ -131,7 +131,7 @@ def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],b
         (
             utils.pygameSurfToBytes(finalImage),
             curDisplayParams["spoiler"],
-            shapeCodes if curDisplayParams["result"] else None,
+            [s[0] for s in shapeCodes] if curDisplayParams["result"] else None,
             viewer3dLinks
         ),
         hasAtLeastOneInvalidShapeCode,

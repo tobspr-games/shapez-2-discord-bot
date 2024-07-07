@@ -1,3 +1,17 @@
+## 07 Jul 24
+- Update for alphas : 23, 23.1 :
+  - Add versions in game infos
+  - Update buildings, islands, translations
+  - Add support for hexagonal shapes :
+    - Add +hex parameter
+    - Add shape config constants in game infos
+    - Update shape viewer, shape code generator, responses, operation graph, /blueprint-creator
+  - Add support for default platform additional data being omitted in blueprints
+  - Update global wire receivers additional data in blueprints
+- Remove milestone shapes feature in shape viewer
+- Make the color used in shape expansion be the current struct color when +struct is used
+- Fix incorrect default additional data for rail related platforms
+
 ## 04 Jul 24
 - Fix antispam not respecting the restrict to servers constant
 

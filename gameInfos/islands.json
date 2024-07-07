@@ -1,5 +1,5 @@
 {
-    "GameVersion": 99999,
+    "GameVersion": 1082,
     "Islands": [
         {
             "Id": "Layout_SpaceBeltNode",
@@ -128,15 +128,24 @@
                 {}
             ],
             "RemovedNotches": [],
-            "ReducedSides": [
+            "ReducedSides": [],
+            "BuildAreaOverride": [
                 {
-                    "Direction_L": 1
-                },
-                {
-                    "Direction_L": 2
-                },
-                {
-                    "Direction_L": 3
+                    "Tile": {},
+                    "Rects": [
+                        [
+                            10,
+                            4,
+                            7,
+                            12
+                        ],
+                        [
+                            17,
+                            8,
+                            1,
+                            4
+                        ]
+                    ]
                 }
             ],
             "IslandUnitCost": 2
@@ -732,13 +741,11 @@
                     "X": 1
                 },
                 {
-                    "X": 2
+                    "X": -1,
+                    "Y": 1
                 },
                 {
-                    "X": 3
-                },
-                {
-                    "X": 4
+                    "Y": 1
                 }
             ],
             "RemovedNotches": [],
@@ -756,23 +763,19 @@
                 },
                 {
                     "Tile": {
-                        "X": 2
+                        "X": -1,
+                        "Y": 1
                     },
                     "Rects": []
                 },
                 {
                     "Tile": {
-                        "X": 3
-                    },
-                    "Rects": []
-                },
-                {
-                    "Tile": {
-                        "X": 4
+                        "Y": 1
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 5
         },
         {
             "Id": "Layout_HUB",
