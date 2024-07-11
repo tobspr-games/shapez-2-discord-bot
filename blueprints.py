@@ -117,10 +117,11 @@ class BuildingEntry:
 
 class BuildingBlueprint:
 
-    def __init__(self,asEntryList:list[BuildingEntry],icons:list[BlueprintIcon]) -> None:
+    def __init__(self,asEntryList:list[BuildingEntry],icons:list[BlueprintIcon],binaryVersion:int) -> None:
         self.asEntryList = asEntryList
         self.asTileDict = _getTileDictFromEntryList(asEntryList)
         self.icons = icons
+        self.binaryVersion = binaryVersion
 
     def getSize(self) -> Size:
         return _genericGetSize(self)
@@ -140,7 +141,8 @@ class BuildingBlueprint:
             "Icon" : {
                 "Data" : [i._encode() for i in self.icons]
             },
-            "Entries" : [e._encode() for e in self.asEntryList]
+            "Entries" : [e._encode() for e in self.asEntryList],
+            "BinaryVersion" : self.binaryVersion
         }
 
 class IslandEntry:
@@ -226,7 +228,7 @@ class Blueprint:
             if tempBuildingList == []:
                 self.buildingBP = None
             else:
-                self.buildingBP = BuildingBlueprint(tempBuildingList,blueprint.icons)
+                self.buildingBP = BuildingBlueprint(tempBuildingList,blueprint.icons,gameInfos.versions.LATEST_GAME_VERSION)
 
     def getCost(self) -> int:
         # bp cost formula : last updated : alpha 15.2
@@ -852,9 +854,12 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
 
     validBP["Entries"] = validBPEntries
 
+    if bpType == BUILDING_BP_TYPE:
+        validBP["BinaryVersion"] = _getKeyValue(blueprint,"BinaryVersion",int,gameInfos.versions.LATEST_GAME_VERSION)
+
     return validBP
 
-def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None]) -> BuildingBlueprint:
+def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None],binaryVersion:int) -> BuildingBlueprint:
 
     entryList:list[BuildingEntry] = []
     occupiedTiles:set[Pos] = set()
@@ -885,7 +890,7 @@ def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None])
             b["C"]
         ))
 
-    return BuildingBlueprint(entryList,[BlueprintIcon(i) for i in icons])
+    return BuildingBlueprint(entryList,[BlueprintIcon(i) for i in icons],binaryVersion)
 
 def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> IslandBlueprint:
 
@@ -924,7 +929,7 @@ def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> 
             continue
 
         try:
-            curBuildingBP = _decodeBuildingBP(island["B"]["Entries"],island["B"]["Icon"]["Data"])
+            curBuildingBP = _decodeBuildingBP(island["B"]["Entries"],island["B"]["Icon"]["Data"],island["B"]["BinaryVersion"])
         except BlueprintError as e:
             raise BlueprintError(
                 f"Error while creating building blueprint representation of '{islandEntryInfos['t'].id}' at {islandEntryInfos['pos']} : {e}")
@@ -981,12 +986,14 @@ def decodeBlueprint(rawBlueprint:str) -> Blueprint:
     if bpType == BUILDING_BP_TYPE:
         func = _decodeBuildingBP
         text = "building"
+        kwargs = {"binaryVersion":validBP["BinaryVersion"]}
     else:
         func = _decodeIslandBP
         text = "platform"
+        kwargs = {}
 
     try:
-        decodedDecodedBP = func(validBP["Entries"],validBP["Icon"]["Data"])
+        decodedDecodedBP = func(validBP["Entries"],validBP["Icon"]["Data"],**kwargs)
     except BlueprintError as e:
         raise BlueprintError(f"Error while creating {text} blueprint representation : {e}")
     return Blueprint(majorVersion,version,bpType,decodedDecodedBP)

@@ -1253,7 +1253,7 @@ def runDiscordBot() -> None:
                             utils.Rotation(0),
                             gameInfos.buildings.allBuildings["SandboxItemProducerDefaultInternalVariant"],
                             buildingExtra
-                        )],blueprints.getDefaultBlueprintIcons(blueprints.BUILDING_BP_TYPE))
+                        )],blueprints.getDefaultBlueprintIcons(blueprints.BUILDING_BP_TYPE),blueprintInfos[1])
                     ))
                     noErrors = True
                 except blueprints.BlueprintError as e:
@@ -1287,12 +1287,15 @@ def runDiscordBot() -> None:
                 curX += maxX + 1
 
             bpType = blueprints.BUILDING_BP_TYPE if toCreateBuildings else blueprints.ISLAND_BP_TYPE
+            kwargs = {}
+            if toCreateBuildings:
+                kwargs["binaryVersion"] = blueprintInfos[1]
             try:
                 responseMsg = blueprints.encodeBlueprint(blueprints.Blueprint(
                     *blueprintInfos,
                     bpType,
                     (blueprints.BuildingBlueprint if toCreateBuildings else blueprints.IslandBlueprint)
-                    (entryList,blueprints.getDefaultBlueprintIcons(bpType))
+                    (entryList,blueprints.getDefaultBlueprintIcons(bpType),**kwargs)
                 ))
                 noErrors = True
             except blueprints.BlueprintError as e:

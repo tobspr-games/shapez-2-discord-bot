@@ -361,45 +361,74 @@ def _drawQuadrant(
     if quadShape == "c":
 
         darkenedColor = tuple(round(c/2) for c in color)
-        darkenedAreasOffset = 0 if layerIndex%2 == 0 else 22.5
-        startAngle1 = math.radians(67.5-darkenedAreasOffset)
-        stopAngle1 = math.radians(90-darkenedAreasOffset)
-        startAngle2 = math.radians(22.5-darkenedAreasOffset)
-        stopAngle2 = math.radians(45-darkenedAreasOffset)
-        darkenedAreasRect = pygamePIL.Rect(
-            halfBorderSize - curQuadSize,
-            halfBorderSize,
-            2 * curQuadSize,
-            2 * curQuadSize
-        )
 
-        if drawShadow:
-            pygamePIL.draw_circle(quadSurface,SHADOW_COLOR, # shadow
-                (halfBorderSize,withBorderQuadSize-halfBorderSize),
-                curQuadSize+halfBorderSize,
-                borderSize,
-                draw_top_right=True
+        if shapeConfig == SHAPE_CONFIG_QUAD:
+
+            darkenedAreasOffset = 0 if layerIndex%2 == 0 else 22.5
+            startAngle1 = math.radians(67.5-darkenedAreasOffset)
+            stopAngle1 = math.radians(90-darkenedAreasOffset)
+            startAngle2 = math.radians(22.5-darkenedAreasOffset)
+            stopAngle2 = math.radians(45-darkenedAreasOffset)
+            darkenedAreasRect = pygamePIL.Rect(
+                halfBorderSize - curQuadSize,
+                halfBorderSize,
+                2 * curQuadSize,
+                2 * curQuadSize
             )
 
-        pygamePIL.draw_circle(quadSurface,color, # main circle
-            (halfBorderSize,withBorderQuadSize-halfBorderSize),
-            curQuadSize,
-            draw_top_right=True
-        )
-        pygamePIL.draw_arc(quadSurface,darkenedColor, # 1st darkened area
-            darkenedAreasRect,
-            startAngle1,
-            stopAngle1,
-            math.ceil(curQuadSize)
-        )
-        pygamePIL.draw_arc(quadSurface,darkenedColor, # 2nd darkened area
-            darkenedAreasRect,
-            startAngle2,
-            stopAngle2,
-            math.ceil(curQuadSize)
-        )
+            if drawShadow:
+                pygamePIL.draw_circle(quadSurface,SHADOW_COLOR, # shadow
+                    (halfBorderSize,withBorderQuadSize-halfBorderSize),
+                    curQuadSize+halfBorderSize,
+                    borderSize,
+                    draw_top_right=True
+                )
 
-        return quadSurface, None
+            pygamePIL.draw_circle(quadSurface,color, # main circle
+                (halfBorderSize,withBorderQuadSize-halfBorderSize),
+                curQuadSize,
+                draw_top_right=True
+            )
+            pygamePIL.draw_arc(quadSurface,darkenedColor, # 1st darkened area
+                darkenedAreasRect,
+                startAngle1,
+                stopAngle1,
+                math.ceil(curQuadSize)
+            )
+            pygamePIL.draw_arc(quadSurface,darkenedColor, # 2nd darkened area
+                darkenedAreasRect,
+                startAngle2,
+                stopAngle2,
+                math.ceil(curQuadSize)
+            )
+
+            return quadSurface, None
+
+        elif shapeConfig == SHAPE_CONFIG_HEX:
+
+            points = [(0,0),((SQRT_3/2)*curQuadSize,curQuadSize/2),(0,curQuadSize)]
+            points = [(halfBorderSize+x,halfBorderSize+y) for x,y in points]
+
+            shadowPoints = [
+                (points[0][0],points[0][1]-halfBorderSize),
+                (points[1][0]+((SQRT_3/2)*halfBorderSize),points[1][1]-(halfBorderSize/2)),
+                (points[2][0],points[2][1])
+            ]
+
+            sideMiddlePoint = ((points[0][0]+points[1][0])/2,(points[0][1]+points[1][1])/2)
+            if layerIndex%2 == 0:
+                darkenedArea = [points[0],sideMiddlePoint,points[2]]
+            else:
+                darkenedArea = [sideMiddlePoint,points[1],points[2]]
+
+            if drawShadow:
+                pygamePIL.draw_polygon(quadSurface,SHADOW_COLOR,shadowPoints) # shadow
+
+            pygamePIL.draw_polygon(quadSurface,color,points) # main polygon
+
+            pygamePIL.draw_polygon(quadSurface,darkenedColor,darkenedArea) # darkened area
+
+            return quadSurface, None
 
     raise ValueError(f"Unknown shape type : {quadShape}")
 

@@ -1,3 +1,12 @@
+## 11 Jul 24
+- Update for alpha 23.2 and 0.0.1 :
+  - Add versions in game infos
+    - Add support for X.X.X version format
+  - Update buildings, translations
+  - Update /msg commands
+  - Add support for binary version in blueprints
+  - Add visual for crystals in hex mode in shape viewer
+
 ## 07 Jul 24
 - Update for alphas : 23, 23.1 :
   - Add versions in game infos

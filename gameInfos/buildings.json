@@ -1,5 +1,5 @@
 {
-    "GameVersion": 1082,
+    "GameVersion": 1089,
     "Buildings": [
         {
             "Id": "BeltDefaultVariant",
@@ -1457,21 +1457,6 @@
                         {
                             "X": 0,
                             "Y": -1,
-                            "Z": 0
-                        },
-                        {
-                            "X": 0,
-                            "Y": 0,
-                            "Z": 0
-                        }
-                    ]
-                },
-                {
-                    "Id": "VirtualHalvesSwapperDefaultInternalVariantMirrored",
-                    "Tiles": [
-                        {
-                            "X": 0,
-                            "Y": 1,
                             "Z": 0
                         },
                         {

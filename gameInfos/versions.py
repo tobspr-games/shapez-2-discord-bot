@@ -24,7 +24,9 @@ GAME_VERSIONS = {
     1067 : ["a22.2"],
     1071 : ["a22.3","a22.4"],
     99999 : ["a22.4"],
-    1082 : ["a23","a23.1"]
+    1082 : ["a23","a23.1"],
+    1088 : ["a23.2"],
+    1089 : ["0.0.1"]
 }
 LATEST_GAME_VERSION = next(iter(reversed(GAME_VERSIONS.keys())))
 LATEST_PUBLIC_GAME_VERSION = 1033
@@ -33,6 +35,7 @@ LATEST_MAJOR_VERSION = 1
 BP_VERSION_REACTION_A = "\U0001f1e6"
 BP_VERSION_REACTION_D = "\U0001f1e9"
 BP_VERSION_REACTION_DOT = "\u23fa"
+BP_VERSION_REACTION_DOT_2 = 1261037521496965202
 BP_VERSION_REACTION_UNITS = {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)}
 BP_VERSION_REACTION_TENS = {str(i) : v for i,v in enumerate([
     1159909533074866286,1159909535872471162,1159909537944457226,
@@ -62,6 +65,7 @@ def versionNumToText(version:int,returnAll:bool=False) -> None|str|list[str]:
         output = ""
 
         if versionText[0] == "a":
+
             output += "Alpha "
             versionText = versionText[1:]
 
@@ -69,6 +73,10 @@ def versionNumToText(version:int,returnAll:bool=False) -> None|str|list[str]:
                 output += versionText[:-1] + " demo"
             else:
                 output += versionText
+
+        else:
+
+            output += versionText
 
         outputs.append(output)
 
@@ -87,6 +95,7 @@ def versionNumToReactions(version:int) -> None|list[str|int]:
     versionText = versionTexts[-1]
 
     if versionText[0] == "a":
+
         output = [BP_VERSION_REACTION_A]
         versionText = versionText[1:]
 
@@ -107,5 +116,15 @@ def versionNumToReactions(version:int) -> None|list[str|int]:
 
         if suffix is not None:
             output.append(suffix)
+
+    else:
+
+        output = [
+            BP_VERSION_REACTION_TENS[versionText[0]],
+            BP_VERSION_REACTION_DOT,
+            BP_VERSION_REACTION_UNITS[versionText[2]],
+            BP_VERSION_REACTION_DOT_2,
+            BP_VERSION_REACTION_TENTHS[versionText[4]]
+        ]
 
     return output
