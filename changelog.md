@@ -1,3 +1,6 @@
+## 14 Jul 24
+- Update /msg commands
+
 ## 11 Jul 24
 - Update for alpha 23.2 and 0.0.1 :
   - Add versions in game infos
