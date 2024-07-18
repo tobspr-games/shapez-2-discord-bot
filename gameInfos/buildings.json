@@ -1,5 +1,5 @@
 {
-    "GameVersion": 1089,
+    "GameVersion": 1091,
     "Buildings": [
         {
             "Id": "BeltDefaultVariant",
@@ -1353,6 +1353,26 @@
                 },
                 {
                     "Id": "StackerDefaultInternalVariantMirrored",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "StackerStraightVariant",
+            "InternalVariants": [
+                {
+                    "Id": "StackerStraightInternalVariant",
                     "Tiles": [
                         {
                             "X": 0,

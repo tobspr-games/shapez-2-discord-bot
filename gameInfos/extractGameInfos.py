@@ -9,11 +9,13 @@ BUILDINGS_PATH = BASE_PATH + "buildings.json"
 ADDITIONAL_BUILDINGS_PATH = "./gameInfos/additionalBuildings.json"
 # RESEARCH_PATH = BASE_PATH + "research-metadata-full.json"
 TRANSLATIONS_PATH = BASE_PATH + "translations-en-US.json"
+IDENTIFIERS_PATH = BASE_PATH + "identifiers.json"
 
 EXTRACTED_BUILDINGS_PATH = "./gameInfos/buildings.json"
 EXTRACTED_RESEARCH_PATH = "./gameInfos/research.json"
 EXTRACTED_ISLANDS_PATH = "./gameInfos/islands.json"
 EXTRACTED_TRANSLATIONS_PATH = "./gameInfos/translations-en-US.json"
+EXTRACTED_ICONS_PATH = "./gameInfos/icons.json"
 
 def extractKeys(fromDict:dict,toDict:dict,keys:list[str]) -> dict:
     for key in keys:
@@ -97,6 +99,17 @@ def main() -> None:
         translationsRaw = json.load(f)
     with open(EXTRACTED_TRANSLATIONS_PATH,"w",encoding="utf-8") as f:
         json.dump(translationsRaw["Entries"],f,ensure_ascii=False,indent=4)
+
+
+
+    # icons
+    with open(IDENTIFIERS_PATH,encoding="utf-8") as f:
+        identifiersRaw = json.load(f)
+    with open(EXTRACTED_ICONS_PATH,"w",encoding="utf-8") as f:
+        json.dump({
+            "GameVersion" : GAME_VERSION,
+            "Icons":sorted(identifiersRaw["IconIds"])
+        },f,ensure_ascii=False,indent=4)
 
 
 

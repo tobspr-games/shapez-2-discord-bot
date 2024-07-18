@@ -44,6 +44,7 @@ GI_RESEARCH_PATH = "./gameInfos/research.json"
 GI_BUILDINGS_PATH = "./gameInfos/buildings.json"
 GI_ISLANDS_PATH = "./gameInfos/islands.json"
 GI_TRANSLATIONS_PATH = "./gameInfos/translations-en-US.json"
+GI_ICONS_PATH = "./gameInfos/icons.json"
 
 # antispam
 ANTISPAM_MSG_COUNT_TRESHOLD = 4

@@ -20,6 +20,8 @@ ISLAND_BP_TYPE = "Island"
 NUM_LAYERS = 3
 ISLAND_ROTATION_CENTER = utils.FloatPos(*([(gameInfos.islands.ISLAND_SIZE/2)-.5]*2))
 
+NUM_BP_ICONS = 4
+
 # use variables instead of string literals and make potential ID changes not go unnoticed at the same time
 BUILDING_IDS = {
     "label" : gameInfos.buildings.allBuildings["LabelDefaultInternalVariant"].id,
@@ -58,12 +60,7 @@ ISLANDS_WITH_RAIL_EXTRA_DATA = [ISLAND_IDS[id] for id in (
     "trainFluidsLoader",
     "trainFluidsLoaderFlipped",
     "trainFluidsUnloader",
-    "trainFluidsUnloaderFlipped",
-    "trainStop",
-    "trainProducerRed",
-    "trainProducerGreen",
-    "trainProducerBlue",
-    "trainProducerWhite"
+    "trainFluidsUnloaderFlipped"
 )]
 
 class BlueprintError(Exception): ...
@@ -135,6 +132,9 @@ class BuildingBlueprint:
     def getTileCount(self) -> int:
         return len(self.asTileDict)
 
+    def getValidIcons(self) -> list[BlueprintIcon]:
+        return _genericGetValidIcons(self)
+
     def _encode(self) -> dict:
         return {
             "$type" : BUILDING_BP_TYPE,
@@ -187,6 +187,9 @@ class IslandBlueprint:
 
     def getTileCount(self) -> int:
         return len(self.asTileDict)
+
+    def getValidIcons(self) -> list[BlueprintIcon]:
+        return _genericGetValidIcons(self)
 
     def _encode(self) -> dict:
         return {
@@ -271,6 +274,25 @@ def _genericGetCounts(bp:BuildingBlueprint|IslandBlueprint) -> dict[str,int]:
         else:
             output[entryType] += 1
     return output
+
+def _genericGetValidIcons(bp:BuildingBlueprint|IslandBlueprint) -> list[BlueprintIcon]:
+    validIcons = []
+    for icon in bp.icons[:NUM_BP_ICONS]:
+        if icon.type == "empty":
+            validIcons.append(icon)
+            continue
+        if icon.type == "icon":
+            if icon.value in VALID_BP_ICONS:
+                validIcons.append(icon)
+            else:
+                validIcons.append(BlueprintIcon(None))
+            continue
+        if shapeCodeGenerator.isShapeCodeValid(icon.value,None,True)[1]:
+            validIcons.append(icon)
+        else:
+            validIcons.append(BlueprintIcon(None))
+    validIcons += [BlueprintIcon(None)] * (NUM_BP_ICONS-len(validIcons))
+    return validIcons
 
 def _omitKeyIfDefault(dict:dict,key:str,value:int|str,defaults:tuple[typing.Any,...]=(0,"")) -> None:
     if value not in defaults:
@@ -649,6 +671,11 @@ def _getDefaultRawIcons(bpType:str) -> list[str|None]:
         None,
         "shape:" + ("Cu"*4 if bpType == BUILDING_BP_TYPE else "Ru"*4)
     ]
+
+def _loadIcons() -> list[str]:
+    with open(globalInfos.GI_ICONS_PATH,encoding="utf-8") as f:
+        return json.load(f)["Icons"]
+VALID_BP_ICONS = _loadIcons()
 
 
 

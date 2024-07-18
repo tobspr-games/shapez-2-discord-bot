@@ -1,3 +1,12 @@
+## 18 Jul 24
+- Update for 0.0.2 :
+  - Add version in game infos
+  - Update buildings, islands, translations
+  - Remove additional data for train stops and producers in blueprints
+- Make only valid icons show in bp info text
+- Update /msg commands
+- Fix bot reacting with :robot: not only when there is a written mention in the message
+
 ## 14 Jul 24
 - Update /msg commands
 

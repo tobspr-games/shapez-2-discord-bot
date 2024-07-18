@@ -1,5 +1,5 @@
 {
-    "GameVersion": 1089,
+    "GameVersion": 1091,
     "Islands": [
         {
             "Id": "Layout_SpaceBeltNode",
@@ -731,7 +731,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 0
         },
         {
             "Id": "Layout_TrainRollerCoasterLoop",
@@ -775,7 +776,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 0
         },
         {
             "Id": "Layout_HUB",

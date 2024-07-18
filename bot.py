@@ -478,7 +478,7 @@ def getBPInfoText(blueprint:blueprints.Blueprint,advanced:bool) -> str:
             f"Platform tiles : `{utils.sepInGroupsNumber(blueprint.islandBP.getTileCount())}`"
         ])
 
-    blueprintIcons = blueprint.buildingBP.icons if blueprint.type == blueprints.BUILDING_BP_TYPE else blueprint.islandBP.icons
+    blueprintIcons = (blueprint.buildingBP if blueprint.type == blueprints.BUILDING_BP_TYPE else blueprint.islandBP).getValidIcons()
     blueprintIconsStr = []
     for icon in blueprintIcons:
         if icon.type == "empty":
@@ -668,7 +668,7 @@ def runDiscordBot() -> None:
             if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 
                 # equivalent of a /ping
-                if client.user.id in (user.id for user in message.mentions):
+                if client.user.mention in message.content:
                     try:
                         await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
                     except discord.HTTPException:
