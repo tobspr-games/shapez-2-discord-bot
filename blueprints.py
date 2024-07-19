@@ -60,7 +60,8 @@ ISLANDS_WITH_RAIL_EXTRA_DATA = [ISLAND_IDS[id] for id in (
     "trainFluidsLoader",
     "trainFluidsLoaderFlipped",
     "trainFluidsUnloader",
-    "trainFluidsUnloaderFlipped"
+    "trainFluidsUnloaderFlipped",
+    "trainStop"
 )]
 
 class BlueprintError(Exception): ...

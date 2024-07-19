@@ -1,3 +1,9 @@
+## 19 Jul 24
+- Update for 0.0.3 :
+  - Add version in game infos
+  - Update translations
+  - Add back additional data for train stops
+
 ## 18 Jul 24
 - Update for 0.0.2 :
   - Add version in game infos
