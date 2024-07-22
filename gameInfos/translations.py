@@ -30,7 +30,7 @@ class TranslationString:
 def _loadTranslations() -> dict[str,TranslationString]:
 
     with open(globalInfos.GI_TRANSLATIONS_PATH,encoding="utf-8") as f:
-        raw:dict[str,str] = json.load(f)
+        raw:dict[str,str] = json.load(f)["Translations"]
     parsedTranslations:dict[str,TranslationString] = {}
 
     def decodeString(key:str) -> TranslationString:

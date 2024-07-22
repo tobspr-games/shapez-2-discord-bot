@@ -98,7 +98,10 @@ def main() -> None:
     with open(TRANSLATIONS_PATH,encoding="utf-8") as f:
         translationsRaw = json.load(f)
     with open(EXTRACTED_TRANSLATIONS_PATH,"w",encoding="utf-8") as f:
-        json.dump(translationsRaw["Entries"],f,ensure_ascii=False,indent=4)
+        json.dump({
+            "GameVersion" : GAME_VERSION,
+            "Translations" : translationsRaw["Entries"]
+        },f,ensure_ascii=False,indent=4)
 
 
 

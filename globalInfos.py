@@ -37,7 +37,7 @@ SHAPES_PER_ROW = 8
 MIN_SHAPE_SIZE = 10
 MAX_SHAPE_SIZE = 100
 DEFAULT_SHAPE_SIZE = 56
-SHAPE_3D_VIEWER_LINK_START = "https://shapez.soren.codes/shape?identifier="
+SHAPE_3D_VIEWER_LINK_START = "https://community-vortex.shapez2.com/shape?identifier="
 
 # game infos
 GI_RESEARCH_PATH = "./gameInfos/research.json"
@@ -66,7 +66,7 @@ MSG_COMMAND_MESSAGES_PATH = "./messages.json"
 FONT_PATH = "./Barlow-Regular.ttf"
 FONT_BOLD_PATH = "./Barlow-Bold.ttf"
 
-BLUEPRINT_3D_VIEWER_LINK_START = "https://shapez.soren.codes/blueprint/view?identifier="
+BLUEPRINT_3D_VIEWER_LINK_START = "https://community-vortex.shapez2.com/blueprint/view?identifier="
 LINK_CHAR_REPLACEMENT = {
     ":" : "%3A",
     "/" : "%2F",

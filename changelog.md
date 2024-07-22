@@ -1,3 +1,10 @@
+## 22 Jul 24
+- Update for 0.0.4 :
+  - Add version in game infos
+  - Update translations
+- Add game version to translations in game infos
+- Change 3D viewer links
+
 ## 19 Jul 24
 - Update for 0.0.3 :
   - Add version in game infos
