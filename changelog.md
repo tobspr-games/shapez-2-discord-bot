@@ -3,6 +3,10 @@
   - Add version in game infos
   - Update icons
 
+- Update for 0.0.6 :
+  - Add version in game infos
+  - Update islands
+
 ## 22 Jul 24
 - Update for 0.0.4 :
   - Add version in game infos

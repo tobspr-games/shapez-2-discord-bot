@@ -1,5 +1,5 @@
 {
-    "GameVersion": 1094,
+    "GameVersion": 1095,
     "Islands": [
         {
             "Id": "Layout_SpaceBeltNode",
@@ -540,7 +540,8 @@
                     "Tile": {},
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 0
         },
         {
             "Id": "Layout_TrainShapeWagonExtension",
@@ -555,7 +556,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 3
         },
         {
             "Id": "Layout_TrainFluidWagonExtension",
@@ -570,7 +571,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 3
         },
         {
             "Id": "Layout_TrainFillerWagonExtension",
@@ -584,8 +585,7 @@
                     "Tile": {},
                     "Rects": []
                 }
-            ],
-            "IslandUnitCost": 5
+            ]
         },
         {
             "Id": "Layout_TrainProducer_Red",
@@ -609,7 +609,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 10
+            "IslandUnitCost": 5
         },
         {
             "Id": "Layout_TrainProducer_Green",
@@ -633,7 +633,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 10
+            "IslandUnitCost": 5
         },
         {
             "Id": "Layout_TrainProducer_Blue",
@@ -657,7 +657,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 10
+            "IslandUnitCost": 5
         },
         {
             "Id": "Layout_TrainProducer_White",
@@ -681,7 +681,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 10
+            "IslandUnitCost": 5
         },
         {
             "Id": "Layout_TrainTwister",
