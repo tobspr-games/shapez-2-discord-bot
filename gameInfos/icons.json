@@ -2,6 +2,10 @@
     "GameVersion": 1094,
     "Icons": [
         "Anchor",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
         "BlueprintCurrency",
         "Blueprints",
         "Buildings",

@@ -1,3 +1,8 @@
+## 24 Jul 24
+- Update for 0.0.5 :
+  - Add version in game infos
+  - Update icons
+
 ## 22 Jul 24
 - Update for 0.0.4 :
   - Add version in game infos
