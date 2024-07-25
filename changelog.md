@@ -1,3 +1,8 @@
+## 25 Jul 24
+- Update for 0.0.7 :
+  - Add version in game infos
+  - Update islands
+
 ## 24 Jul 24
 - Update for 0.0.5 :
   - Add version in game infos

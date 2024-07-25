@@ -106,7 +106,7 @@
                     "Direction_L": 3
                 }
             ],
-            "IslandUnitCost": 2
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_ShapeMinerExtension",
@@ -120,7 +120,8 @@
                     "Tile": {},
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 2
         },
         {
             "Id": "Layout_FluidMiner",
@@ -148,7 +149,7 @@
                     ]
                 }
             ],
-            "IslandUnitCost": 2
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_FluidMinerExtension",
@@ -162,7 +163,8 @@
                     "Tile": {},
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 2
         },
         {
             "Id": "Layout_Normal_1",
@@ -171,7 +173,8 @@
                 {}
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 2
         },
         {
             "Id": "Layout_Normal_2",
@@ -183,7 +186,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_Normal_3_L",
@@ -198,7 +202,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 6
         },
         {
             "Id": "Layout_Normal_4_2x2",
@@ -217,7 +222,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 8
         },
         {
             "Id": "Layout_Normal_4_T",
@@ -235,7 +241,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 8
         },
         {
             "Id": "Layout_Normal_5_Cross",
@@ -256,7 +263,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 10
         },
         {
             "Id": "Layout_Normal_9_3x3",
@@ -293,7 +301,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 18
         },
         {
             "Id": "Layout_RailNode",
@@ -361,7 +370,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainLoader_Shapes_Flipped",
@@ -385,7 +395,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainUnloader_Shapes",
@@ -408,7 +419,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainUnloader_Shapes_Flipped",
@@ -432,7 +444,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainLoader_Fluids",
@@ -455,7 +468,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainLoader_Fluids_Flipped",
@@ -479,7 +493,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainUnloader_Fluids",
@@ -502,7 +517,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainUnloader_Fluids_Flipped",
@@ -526,7 +542,8 @@
                     },
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 4
         },
         {
             "Id": "Layout_TrainStation",
@@ -556,7 +573,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 3
+            "IslandUnitCost": 6
         },
         {
             "Id": "Layout_TrainFluidWagonExtension",
@@ -571,7 +588,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 3
+            "IslandUnitCost": 6
         },
         {
             "Id": "Layout_TrainFillerWagonExtension",
@@ -585,7 +602,8 @@
                     "Tile": {},
                     "Rects": []
                 }
-            ]
+            ],
+            "IslandUnitCost": 2
         },
         {
             "Id": "Layout_TrainProducer_Red",
@@ -609,7 +627,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 10
         },
         {
             "Id": "Layout_TrainProducer_Green",
@@ -633,7 +651,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 10
         },
         {
             "Id": "Layout_TrainProducer_Blue",
@@ -657,7 +675,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 10
         },
         {
             "Id": "Layout_TrainProducer_White",
@@ -681,7 +699,7 @@
                     "Rects": []
                 }
             ],
-            "IslandUnitCost": 5
+            "IslandUnitCost": 10
         },
         {
             "Id": "Layout_TrainTwister",
@@ -813,7 +831,8 @@
                 }
             ],
             "RemovedNotches": [],
-            "ReducedSides": []
+            "ReducedSides": [],
+            "IslandUnitCost": 18
         }
     ]
 }
