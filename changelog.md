@@ -1,3 +1,7 @@
+## 07 Aug 24
+- Make the /access-blueprint response sent in blueprints channels also send in threads of those channels
+- Add new blueprints channel in guild settings
+
 ## 25 Jul 24
 - Update for 0.0.7 :
   - Add version in game infos

@@ -145,7 +145,7 @@ Important note : guild settings currently can't be modified so most of the comma
 ## Additional message content related features
 
 - If the bot is mentioned, it should react with `:robot:`
-- If one (and only one) blueprint code is detected in a message and its attached files, the bot will send a message containing part of the /access-blueprint command response if the message is in a blueprints channel, otherwise it will react with the version of that blueprint
+- If one (and only one) blueprint code is detected in a message and its attached files, the bot will send a message containing part of the /access-blueprint command response if the message is in a blueprints channel or one of its threads, otherwise it will react with the version of that blueprint
 - If a message contains one attachment and it's a screenshot containing the debug menu, the bot will send a message informing how to close that menu
 - Port of sbe's antispam : if a user sends 4 times in a row the same message in the same server at max 10 seconds interval, the bot will time them out for an hour and the messages in question will be deleted
 

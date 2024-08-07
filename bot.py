@@ -649,21 +649,31 @@ def runDiscordBot() -> None:
                         pass
 
                 # bp info message
-                if (message.guild is not None) and (message.channel.id in (await guildSettings.getGuildSettings(message.guild.id))["blueprintsChannels"]):
+                async def bpInfoMessageLogic() -> None:
+                    nonlocal reactedToBPCodeInMsg
+                    if message.guild is None:
+                        return
+                    curBlueprintsChannels = (await guildSettings.getGuildSettings(message.guild.id))["blueprintsChannels"]
+                    if type(message.channel) == discord.Thread:
+                        if message.channel.parent_id not in curBlueprintsChannels:
+                            return
+                    else:
+                        if message.channel.id not in curBlueprintsChannels:
+                            return
                     potentialBP = await getSinglePotentialBPCodeInMessage(message)
-                    if potentialBP is not None:
-                        try:
-                            decodedBP = blueprints.decodeBlueprint(potentialBP)
-                        except blueprints.BlueprintError:
-                            pass
-                        else:
-                            responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
-                            try:
-                                await message.reply(safenString(responseMsg),files=files,mention_author=False)
-                            except discord.HTTPException:
-                                pass
-                            else:
-                                reactedToBPCodeInMsg = True
+                    if potentialBP is None:
+                        return
+                    try:
+                        decodedBP = blueprints.decodeBlueprint(potentialBP)
+                    except blueprints.BlueprintError:
+                        return
+                    responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
+                    try:
+                        await message.reply(safenString(responseMsg),files=files,mention_author=False)
+                    except discord.HTTPException:
+                        return
+                    reactedToBPCodeInMsg = True
+                await bpInfoMessageLogic()
 
             if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 

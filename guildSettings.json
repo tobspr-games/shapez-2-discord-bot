@@ -25,7 +25,8 @@
         "antispamEnabled": true,
         "antispamAlertChannel": 1000352074426499182,
         "blueprintsChannels": [
-            1093933544025358436
+            1093933544025358436,
+            1270779062490497044
         ]
     }
 }
