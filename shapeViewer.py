@@ -38,7 +38,12 @@ BASE_COLORS:dict[str,tuple[int,int,int]] = {
     "o" : (213,133,13)
 }
 
-INTERNAL_COLOR_SKINS_COLORS:dict[str,dict[str,tuple[int,int,int]]] = {
+INTERNAL_COLOR_SKINS = ["RGB","RYB","CMYK"]
+INTERNAL_COLOR_SKINS_ANNOTATION = typing.Literal["RGB","RYB","CMYK"]
+EXTERNAL_COLOR_SKINS = ["RGB","RYB","CMYK","RGB-cb"]
+EXTERNAL_COLOR_SKINS_ANNOTATION = typing.Literal["RGB","RYB","CMYK","RGB-cb"]
+
+INTERNAL_COLOR_SKINS_COLORS:dict[INTERNAL_COLOR_SKINS_ANNOTATION,dict[str,tuple[int,int,int]]] = {
     "RGB" : {
         "u" : BASE_COLORS["u"],
         "r" : BASE_COLORS["r"],
@@ -70,11 +75,6 @@ INTERNAL_COLOR_SKINS_COLORS:dict[str,dict[str,tuple[int,int,int]]] = {
         "w" : BASE_COLORS["k"]
     }
 }
-
-INTERNAL_COLOR_SKINS = ["RGB","RYB","CMYK"]
-INTERNAL_COLOR_SKINS_ANNOTATION = typing.Literal["RGB","RYB","CMYK"]
-EXTERNAL_COLOR_SKINS = ["RGB","RYB","CMYK","RGB-cb"]
-EXTERNAL_COLOR_SKINS_ANNOTATION = typing.Literal["RGB","RYB","CMYK","RGB-cb"]
 
 # according to 'dnSpy > ShapeMeshGenerator > GenerateShapeMesh()', this value should be 0.85
 # according to ingame screenshots, it should be 0.77
@@ -470,15 +470,24 @@ def _rotateSurf(toRotate:pygamePIL.Surface,numQuads:int,quadIndex:int,layerIndex
     tempSurf = pygamePIL.transform_rotate(tempSurf,-((360/numQuads)*quadIndex))
     return tempSurf
 
-def renderShape(shapeCode:str,surfaceSize:int,
-    colorSkin:EXTERNAL_COLOR_SKINS_ANNOTATION=EXTERNAL_COLOR_SKINS[0],shapeConfig:str=SHAPE_CONFIG_QUAD) -> pygamePIL.Surface:
+def _externalToInternalColorSkin(external:EXTERNAL_COLOR_SKINS_ANNOTATION) -> tuple[INTERNAL_COLOR_SKINS_ANNOTATION,bool]:
+    return external.removesuffix("-cb"), external.endswith("-cb")
+
+def getShapeColor(colorCode:str,colorSkin:EXTERNAL_COLOR_SKINS_ANNOTATION) -> tuple[int,int,int]:
+    return INTERNAL_COLOR_SKINS_COLORS[_externalToInternalColorSkin(colorSkin)[0]][colorCode]
+
+def renderShape(
+    shapeCode:str,
+    surfaceSize:int,
+    colorSkin:EXTERNAL_COLOR_SKINS_ANNOTATION=EXTERNAL_COLOR_SKINS[0],
+    shapeConfig:str=SHAPE_CONFIG_QUAD
+) -> pygamePIL.Surface:
 
     decomposedShapeCode = shapeCode.split(SHAPE_LAYER_SEPARATOR)
     numQuads = int(len(decomposedShapeCode[0])/2)
     decomposedShapeCode = [[layer[i*2:(i*2)+2] for i in range(numQuads)] for layer in decomposedShapeCode]
 
-    curInternalColorSkin = colorSkin.removesuffix("-cb")
-    colorblindPatterns = colorSkin.endswith("-cb")
+    curInternalColorSkin, colorblindPatterns = _externalToInternalColorSkin(colorSkin)
 
     returnSurface = pygamePIL.Surface((FAKE_SURFACE_SIZE,FAKE_SURFACE_SIZE),pygamePIL.SRCALPHA)
     pygamePIL.draw_circle(returnSurface,BG_CIRCLE_COLOR,(FAKE_SURFACE_SIZE/2,FAKE_SURFACE_SIZE/2),BG_CIRCLE_DIAMETER/2)
@@ -489,8 +498,16 @@ def renderShape(shapeCode:str,surfaceSize:int,
 
         for quadIndex, quad in enumerate(layer):
 
-            quadSurface, quadBorder = _drawQuadrant(quad[0],quad[1],SHAPE_SIZE,quadIndex,layerIndex,decomposedShapeCode,
-                curInternalColorSkin,shapeConfig)
+            quadSurface, quadBorder = _drawQuadrant(
+                quad[0],
+                quad[1],
+                SHAPE_SIZE,
+                quadIndex,
+                layerIndex,
+                decomposedShapeCode,
+                curInternalColorSkin,
+                shapeConfig
+            )
             quadBorders.append(quadBorder)
 
             if quadSurface is None:
@@ -508,4 +525,5 @@ def renderShape(shapeCode:str,surfaceSize:int,
 
             _blitCentered(_rotateSurf(border,numQuads,quadIndex,layerIndex,SHAPE_SIZE),returnSurface)
 
-    return pygamePIL.transform_smoothscale(returnSurface,(surfaceSize,surfaceSize)) # pygame doesn't work well at low resolution so render at size 500 then downscale to the desired size
+    # pygame doesn't work well at low resolution so render at size 500 then downscale to the desired size
+    return pygamePIL.transform_smoothscale(returnSurface,(surfaceSize,surfaceSize))

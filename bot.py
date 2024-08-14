@@ -145,6 +145,14 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         if message.guild is None:
             guildId = None
         else:
+
+            if type(message.author) == discord.User:
+                raise ValueError(
+                    f"Author ({userId} {message.author.mention})"
+                    f"of message ({message.id} {message.jump_url} )"
+                    f"is not a member despite being in a guild ({message.guild.id} {message.guild.name})"
+                )
+
             guildId = message.guild.id
             userRoles = message.author.roles[1:]
             adminPerm = message.author.guild_permissions.administrator
@@ -155,11 +163,16 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         channelId = interaction.channel_id
         guildId = interaction.guild_id
         if interaction.guild is not None:
+
+            if type(interaction.user) == discord.User:
+                raise ValueError(
+                    f"Author ({userId} {interaction.user.mention})"
+                    f"of interaction (in channel {channelId})"
+                    f"is not a member despite being in a guild ({guildId} {interaction.guild.name})"
+                )
+
             userRoles = interaction.user.roles[1:]
-            if interaction.is_user_integration(): # potentially a bodge bug fix
-                adminPerm = False
-            else:
-                adminPerm = interaction.user.guild_permissions.administrator
+            adminPerm = interaction.user.guild_permissions.administrator
 
     else:
         raise ValueError("No message or interaction in 'hasPermission' function")
@@ -1026,7 +1039,8 @@ def runDiscordBot() -> None:
         public="Errors will be sent publicly if this is True! Sets if the result is sent publicly in the channel",
         see_shape_vars="Whether or not to send the shape codes that were affected to every shape variable",
         spoiler="Whether or not to send the resulting image as spoiler",
-        color_skin="The color skin to use for shapes"
+        color_skin="The color skin to use for shapes",
+        max_shape_layers="The maximum number of layers that shapes can have. In-game, 5 in insane and 4 otherwise"
     )
     async def operationGraphCommand(
         interaction:discord.Interaction,
@@ -1034,7 +1048,8 @@ def runDiscordBot() -> None:
         public:bool=False,
         see_shape_vars:bool=False,
         spoiler:bool=False,
-        color_skin:shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapeViewer.EXTERNAL_COLOR_SKINS[0]
+        color_skin:shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapeViewer.EXTERNAL_COLOR_SKINS[0],
+        max_shape_layers:int=4
     ) -> None:
         if exitCommandWithoutResponse(interaction):
             return
@@ -1049,12 +1064,17 @@ def runDiscordBot() -> None:
                 return
 
             await interaction.response.defer(ephemeral=not public)
+
+            if max_shape_layers < 1:
+                responseMsg = "Max shape layers must be at least 1"
+                return
+
             valid, instructionsOrError = operationGraph.getInstructionsFromText(instructions)
             if not valid:
                 responseMsg = instructionsOrError
                 return
 
-            valid, responseOrError = operationGraph.genOperationGraph(instructionsOrError,see_shape_vars,color_skin)
+            valid, responseOrError = operationGraph.genOperationGraph(instructionsOrError,see_shape_vars,color_skin,max_shape_layers)
             if not valid:
                 responseMsg = responseOrError
                 return

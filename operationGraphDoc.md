@@ -5,7 +5,7 @@ The /operation-graph command allows you to generate a graph of multiple shape tr
 ## Syntax
 
 /operation-graph [instructions]\
-Optional parameters : [public] [see_shape_vars] [spoiler] [color_skin]
+Optional parameters : [public] [see_shape_vars] [spoiler] [color_skin] [max_shape_layers]
 
 ## Shape variables
 
@@ -43,7 +43,7 @@ Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:sh:4,21`, `6,r:paint:11`
   - 1 input
   - 1 output
   - Rotates the shape by 180°
-- sh :
+- swap :
   - 2 inputs
   - 2 outputs
   - Swaps the west halves of both shapes
@@ -70,3 +70,4 @@ Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:sh:4,21`, `6,r:paint:11`
 - `see_shape_vars` (default : false) : For every shape on the graph, the corresponding shape variable number will be displayed and the shape code associated with every shape variable will be sent via text.
 - `spoiler` (default : false) : Whether or not to mark the resulting image as spoiler
 - `color_skin` (default : RGB) : Which color skin to use to render shapes
+- `max_shape_layers` (default : 4) : The maximum number of layers that shapes can have. Affects the `stack` and `pin` operations.

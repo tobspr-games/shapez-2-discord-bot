@@ -6,6 +6,6 @@
     "pins": "**How do I make this shape with pins ?**\nPins that aren't the topmost quadrant of their column count as empty for the vortex, this means :\n- If there is empty quadrants in a shape required for a goal, you can deliver it with pins in those places\n- If there is pins in a shape required for a goal, you can deliver it with empty quadrants in those places",
     "s1": "discord.gg/shapez",
     "mergesplit": "https://cdn.discordapp.com/attachments/1185993729966866483/1186006665384968242/disambiguation.png",
-    "all-shapes": "- `C` : Circle\n- `R` : Square/Rectangle\n- `S` : Star/Spike\n- `W` : Diamond\n- `c` : Crystal\n- `P` : Pin\nhttps://cdn.discordapp.com/attachments/1185993729966866483/1250505996124819456/shapes.png",
+    "all-shapes": "**Quad shapes :**\n- `C` : Circle\n- `R` : Square/Rectangle\n- `S` : Star/Spike\n- `W` : Diamond\n- `c` : Crystal\n- `P` : Pin\n**Hex shapes :**\n- `H` : Hexagon\n- `F` : Flower\n- `G` : Gear\n- `c` : Crystal\n- `P` : Pin\nhttps://cdn.discordapp.com/attachments/1185993729966866483/1272608058018758676/shapes.png",
     "all-colors": "- `u` : Uncolored\n- `r` : Red\n- `g` : Green\n- `b` : Blue\n- `c` : Cyan\n- `m` : Magenta\n- `y` : Yellow\n- `w` : White"
 }

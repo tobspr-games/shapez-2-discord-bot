@@ -7,7 +7,6 @@ PIN_CHAR = "P"
 CRYSTAL_CHAR = "c"
 UNPAINTABLE_SHAPES = [CRYSTAL_CHAR,PIN_CHAR,NOTHING_CHAR]
 REPLACED_BY_CRYSTAL = [PIN_CHAR,NOTHING_CHAR]
-MAX_LAYERS = 4
 
 class Quadrant:
 
@@ -22,7 +21,7 @@ class Shape:
         self.numLayers = len(layers)
         self.numQuads = len(layers[0])
 
-    def fromListOfLayers(layers:list[str]):
+    def fromListOfLayers(layers:list[str]) -> typing.Self:
         newLayers:list[list[Quadrant]] = []
         numQuads = int(len(layers[0])/2)
         for layer in layers:
@@ -31,7 +30,7 @@ class Shape:
                 newLayers[-1].append(Quadrant(layer[quadIndex*2],layer[(quadIndex*2)+1]))
         return Shape(newLayers)
 
-    def fromShapeCode(shapeCode:str):
+    def fromShapeCode(shapeCode:str) -> typing.Self:
         return Shape.fromListOfLayers(shapeCode.split(globalInfos.SHAPE_LAYER_SEPARATOR))
 
     def toListOfLayers(self) -> list[str]:
@@ -44,6 +43,10 @@ class Shape:
         return all(c == NOTHING_CHAR for c in "".join(self.toListOfLayers()))
 
 class InvalidOperationInputs(ValueError): ...
+
+class ShapeOperationConfig:
+    def __init__(self,maxShapeLayers:int) -> None:
+        self.maxShapeLayers = maxShapeLayers
 
 def _gravityConnected(quad1:Quadrant,quad2:Quadrant) -> bool:
     if (quad1.shape in (NOTHING_CHAR,PIN_CHAR)) or (quad2.shape in (NOTHING_CHAR,PIN_CHAR)):
@@ -189,7 +192,7 @@ def _differentNumQuadsUnsupported(func):
         return func(*args,**kwargs)
     return wrapper
 
-def cut(shape:Shape) -> list[Shape]:
+def cut(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     takeQuads = math.ceil(shape.numQuads/2)
     cutPoints = [(0,shape.numQuads-1),(shape.numQuads-takeQuads,shape.numQuads-takeQuads-1)]
     layers = shape.layers
@@ -205,22 +208,22 @@ def cut(shape:Shape) -> list[Shape]:
     shapeA, shapeB = [_cleanUpEmptyUpperLayers(_makeLayersFall(s)) for s in (shapeA,shapeB)]
     return [Shape(shapeA),Shape(shapeB)]
 
-def halfCut(shape:Shape) -> list[Shape]:
-    return [cut(shape)[1]]
+def halfCut(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
+    return [cut(shape,config=config)[1]]
 
-def rotate90CW(shape:Shape) -> list[Shape]:
+def rotate90CW(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     newLayers = []
     for layer in shape.layers:
         newLayers.append([layer[-1],*(layer[:-1])])
     return [Shape(newLayers)]
 
-def rotate90CCW(shape:Shape) -> list[Shape]:
+def rotate90CCW(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     newLayers = []
     for layer in shape.layers:
         newLayers.append([*(layer[1:]),layer[0]])
     return [Shape(newLayers)]
 
-def rotate180(shape:Shape) -> list[Shape]:
+def rotate180(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     takeQuads = math.ceil(shape.numQuads/2)
     newLayers = []
     for layer in shape.layers:
@@ -228,10 +231,10 @@ def rotate180(shape:Shape) -> list[Shape]:
     return [Shape(newLayers)]
 
 @_differentNumQuadsUnsupported
-def swapHalves(shapeA:Shape,shapeB:Shape) -> list[Shape]:
+def swapHalves(shapeA:Shape,shapeB:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     numLayers = max(shapeA.numLayers,shapeB.numLayers)
     takeQuads = math.ceil(shapeA.numQuads/2)
-    shapeACut, shapeBCut = cut(shapeA), cut(shapeB)
+    shapeACut, shapeBCut = cut(shapeA,config=config), cut(shapeB,config=config)
     shapeACut = [[*s.layers,*([[Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*shapeA.numQuads]*(numLayers-len(s.layers)))] for s in shapeACut]
     shapeBCut = [[*s.layers,*([[Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*shapeB.numQuads]*(numLayers-len(s.layers)))] for s in shapeBCut]
     returnShapeA = []
@@ -243,19 +246,19 @@ def swapHalves(shapeA:Shape,shapeB:Shape) -> list[Shape]:
     return [Shape(returnShapeA),Shape(returnShapeB)]
 
 @_differentNumQuadsUnsupported
-def stack(bottomShape:Shape,topShape:Shape) -> list[Shape]:
+def stack(bottomShape:Shape,topShape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     newTopShape = [[Quadrant(NOTHING_CHAR,NOTHING_CHAR) if q.shape == CRYSTAL_CHAR else q for q in l] for l in topShape.layers]
     newLayers = [*bottomShape.layers,*newTopShape]
     newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
-    newLayers = newLayers[:MAX_LAYERS]
+    newLayers = newLayers[:config.maxShapeLayers]
     return [Shape(newLayers)]
 
-def topPaint(shape:Shape,color:str) -> list[Shape]:
+def topPaint(shape:Shape,color:str,*,config:ShapeOperationConfig) -> list[Shape]:
     newLayers = shape.layers[:-1]
     newLayers.append([Quadrant(q.shape,q.color if q.shape in UNPAINTABLE_SHAPES else color) for q in shape.layers[-1]])
     return [Shape(newLayers)]
 
-def pushPin(shape:Shape) -> list[Shape]:
+def pushPin(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
 
     layers = shape.layers
     addedPins = []
@@ -266,17 +269,17 @@ def pushPin(shape:Shape) -> list[Shape]:
         else:
             addedPins.append(Quadrant(PIN_CHAR,NOTHING_CHAR))
 
-    if len(layers) < MAX_LAYERS:
+    if len(layers) < config.maxShapeLayers:
         newLayers = [addedPins,*layers]
     else:
-        newLayers = [addedPins,*(layers[:MAX_LAYERS-1])]
-        removedLayer = layers[MAX_LAYERS-1]
-        for quadIndex,quad in enumerate(newLayers[MAX_LAYERS-1]):
+        newLayers = [addedPins,*(layers[:config.maxShapeLayers-1])]
+        removedLayer = layers[config.maxShapeLayers-1]
+        for quadIndex,quad in enumerate(newLayers[config.maxShapeLayers-1]):
             if _crystalsFused(quad,removedLayer[quadIndex]):
-                _breakCrystals(newLayers,MAX_LAYERS-1,quadIndex)
+                _breakCrystals(newLayers,config.maxShapeLayers-1,quadIndex)
         newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
 
     return [Shape(newLayers)]
 
-def genCrystal(shape:Shape,color:str) -> list[Shape]:
+def genCrystal(shape:Shape,color:str,*,config:ShapeOperationConfig) -> list[Shape]:
     return [Shape([[Quadrant(CRYSTAL_CHAR,color) if q.shape in REPLACED_BY_CRYSTAL else q for q in l] for l in shape.layers])]

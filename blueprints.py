@@ -283,7 +283,7 @@ def _genericGetValidIcons(bp:BuildingBlueprint|IslandBlueprint) -> list[Blueprin
             validIcons.append(icon)
             continue
         if icon.type == "icon":
-            if icon.value in VALID_BP_ICONS:
+            if (icon.value in VALID_BP_ICONS) and (icon.value != "Empty"):
                 validIcons.append(icon)
             else:
                 validIcons.append(BlueprintIcon(None))
