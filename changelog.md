@@ -1,3 +1,6 @@
+## 15 Aug 24
+- Fix error in /operation-graph
+
 ## 14 Aug 24
 - Raise an error if the author of the message/interaction is not a guild member but in a guild in `hasPermission()` function
 - Remove leftover user install support code in `hasPermission()` function
@@ -5,9 +8,9 @@
 - Add hex shapes to /msg all-shapes
 - Make /operation-graph allow specifying a custom shape layer limit
 - Add input color(s) display next to building images in /operation-graph
-- Fix /operation-graph shapes always using the quad shape config
 - Update /operation-graph building images
 - Rename 'sh' to 'swap' in /operation-graph
+- Fix /operation-graph shapes always using the quad shape config
 
 ## 07 Aug 24
 - Make the /access-blueprint response sent in blueprints channels also send in threads of those channels

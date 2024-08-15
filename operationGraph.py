@@ -375,7 +375,7 @@ def genOperationGraph(
                 graphNodes[curCurId].outputs.append(createFinalOutputShape([curCurId],outputShapeCode,output,curShapeConfig))
             else:
                 curId = newId()
-                graphNodes[curId] = GraphNode(GraphNode.SHAPE,[curCurId],None,renderShape(outputShapeCode),
+                graphNodes[curId] = GraphNode(GraphNode.SHAPE,[curCurId],None,renderShape(outputShapeCode,curShapeConfig),
                     shapeVar=output,shapeCode=outputShapeCode,shapeConfig=curShapeConfig)
                 graphNodes[curCurId].outputs.append(curId)
                 toGenOutputs.append((curId,outputLocation))
