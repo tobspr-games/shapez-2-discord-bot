@@ -138,6 +138,10 @@ class PermissionLvls:
 
 async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,interaction:discord.Interaction|None=None) -> bool:
 
+    IGNORE_MEMBERS_BEING_USERS = [
+        1008776202191634432 # automod
+    ]
+
     if message is not None:
 
         userId = message.author.id
@@ -146,7 +150,7 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
             guildId = None
         else:
 
-            if type(message.author) == discord.User:
+            if (type(message.author) == discord.User) and (userId not in IGNORE_MEMBERS_BEING_USERS):
                 raise ValueError(
                     f"Author ({userId} {message.author.mention})"
                     f"of message ({message.id} {message.jump_url} )"
@@ -164,7 +168,7 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         guildId = interaction.guild_id
         if interaction.guild is not None:
 
-            if type(interaction.user) == discord.User:
+            if (type(interaction.user) == discord.User) and (userId not in IGNORE_MEMBERS_BEING_USERS):
                 raise ValueError(
                     f"Author ({userId} {interaction.user.mention})"
                     f"of interaction (in channel {channelId})"

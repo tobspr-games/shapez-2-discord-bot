@@ -1,3 +1,11 @@
+## 19 Aug 24
+- Update for 0.0.8 :
+  - Add version in game infos
+  - Update translations
+- Update /msg play
+- Remove /msg patreon
+- Fix error on automod message send
+
 ## 15 Aug 24
 - Fix error in /operation-graph
 
