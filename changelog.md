@@ -1,3 +1,8 @@
+## 23 Aug 24
+- Update /msg sharebp
+- Add cooldown for /msg
+- Fix error on automod message send (again)
+
 ## 19 Aug 24
 - Update for 0.0.8 :
   - Add version in game infos

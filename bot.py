@@ -150,7 +150,9 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
             guildId = None
         else:
 
-            if (type(message.author) == discord.User) and (userId not in IGNORE_MEMBERS_BEING_USERS):
+            if type(message.author) == discord.User:
+                if userId in IGNORE_MEMBERS_BEING_USERS:
+                    return False
                 raise ValueError(
                     f"Author ({userId} {message.author.mention})"
                     f"of message ({message.id} {message.jump_url} )"
@@ -168,7 +170,9 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         guildId = interaction.guild_id
         if interaction.guild is not None:
 
-            if (type(interaction.user) == discord.User) and (userId not in IGNORE_MEMBERS_BEING_USERS):
+            if type(interaction.user) == discord.User:
+                if userId in IGNORE_MEMBERS_BEING_USERS:
+                    return False
                 raise ValueError(
                     f"Author ({userId} {interaction.user.mention})"
                     f"of interaction (in channel {channelId})"
@@ -1217,8 +1221,20 @@ def runDiscordBot() -> None:
         if exitCommandWithoutResponse(interaction):
             return
         if await hasPermission(PermissionLvls.PUBLIC_FEATURE if public else PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
-            responseMsg = msgCommandMessages[msg.value]
-            ephemeral = not public
+            curMsgId = msg.value
+            curCooldownKey = (interaction.guild_id,curMsgId)
+            curTime = getCurrentTime()
+            curCooldownValue = msgCommandCooldownLastTriggered.get(curCooldownKey)
+            if (
+                (curCooldownValue is not None)
+                and ((curTime-curCooldownValue) < datetime.timedelta(seconds=globalInfos.MSG_COMMAND_COOLDOWN_SECONDS))
+            ):
+                responseMsg = "This message is in cooldown"
+                ephemeral = True
+            else:
+                msgCommandCooldownLastTriggered[curCooldownKey] = curTime
+                responseMsg = msgCommandMessages[curMsgId]
+                ephemeral = not public
         else:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
             ephemeral = True
@@ -1384,3 +1400,4 @@ globalPaused = False
 msgCommandMessages:dict[str,str]
 antiSpamLastMessages:dict[tuple[int,int],dict[str,str|list[discord.Message]|int|datetime.datetime]] = {}
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
+msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}
