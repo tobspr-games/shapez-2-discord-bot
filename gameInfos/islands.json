@@ -797,6 +797,50 @@
             "IslandUnitCost": 0
         },
         {
+            "Id": "Layout_TrainRollerCoasterLoop_Flipped",
+            "Tiles": [
+                {},
+                {
+                    "X": 1
+                },
+                {
+                    "X": -1,
+                    "Y": -1
+                },
+                {
+                    "Y": -1
+                }
+            ],
+            "RemovedNotches": [],
+            "ReducedSides": [],
+            "BuildAreaOverride": [
+                {
+                    "Tile": {},
+                    "Rects": []
+                },
+                {
+                    "Tile": {
+                        "X": 1
+                    },
+                    "Rects": []
+                },
+                {
+                    "Tile": {
+                        "X": -1,
+                        "Y": -1
+                    },
+                    "Rects": []
+                },
+                {
+                    "Tile": {
+                        "Y": -1
+                    },
+                    "Rects": []
+                }
+            ],
+            "IslandUnitCost": 0
+        },
+        {
             "Id": "Layout_HUB",
             "Title": "Vortex Platform",
             "Tiles": [

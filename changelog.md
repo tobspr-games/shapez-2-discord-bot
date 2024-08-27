@@ -1,3 +1,12 @@
+## 27 Aug 24
+- Update for 0.0.8-rc2 :
+  - Update buildings, icons, islands, translations
+- Add /msg launch-options
+- Add `calc` command to /msg commands
+- Specify when command is cheat in /msg commands
+- Remove /msg pins
+- Fix error when rendering shapes with many layers
+
 ## 23 Aug 24
 - Update /msg sharebp
 - Add cooldown for /msg

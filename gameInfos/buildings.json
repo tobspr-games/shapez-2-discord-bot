@@ -1189,6 +1189,31 @@
             ]
         },
         {
+            "Id": "PipeGateDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "PipeGateDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                },
+                {
+                    "Id": "PipeGateDefaultInternalVariantMirrored",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "Id": "PumpDefaultVariant",
             "InternalVariants": [
                 {
@@ -1503,6 +1528,21 @@
                 },
                 {
                     "Id": "VirtualPainterDefaultInternalVariantMirrored",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "VirtualPinPusherDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "VirtualPinPusherDefaultInternalVariant",
                     "Tiles": [
                         {
                             "X": 0,

@@ -16,6 +16,8 @@ number = int | float
 
 class error(RuntimeError): ...
 
+
+
 class Surface:
 
     def __init__(self,size:tuple[number,number],flags:int=0,*,_fromImage:PIL.Image.Image|None=None) -> None:
@@ -53,6 +55,8 @@ class Surface:
     def copy(self) -> typing.Self:
         return _imgToSurf(self._image.copy())
 
+
+
 class Rect:
 
     def __init__(self,left:number,top:number,width:number,height:number) -> None:
@@ -64,8 +68,15 @@ class Rect:
     def _toBBox(self) -> tuple[number,number,number,number]:
         return (self.left,self.top,self.left+self.width-1,self.top+self.height-1)
 
+
+
 def _imgToSurf(img:PIL.Image.Image) -> Surface:
     return Surface((0,0),_fromImage=img)
+
+def _invalidBBoxCheck(bbox:tuple[number,number,number,number]) -> bool:
+    return (bbox[2] < bbox[0]) or (bbox[3] < bbox[1])
+
+
 
 def image_load(filename:str|io.BytesIO) -> Surface:
     try:
@@ -77,14 +88,19 @@ def image_load(filename:str|io.BytesIO) -> Surface:
 def image_save(surface:Surface,filename:str|io.BytesIO,namehint:str="") -> None:
     surface._image.save(filename,None if namehint == "" else namehint)
 
+
+
 def draw_rect(surface:Surface,color:color,rect:Rect,width:int=0,border_radius:int=-1) -> None:
+    curBBox = rect._toBBox()
+    if _invalidBBoxCheck(curBBox):
+        return
     fillColor = color if width == 0 else None
     outlineColor = None if width == 0 else color
     draw = PIL.ImageDraw.Draw(surface._image)
     if border_radius < 0:
-        draw.rectangle(rect._toBBox(),fillColor,outlineColor,width)
+        draw.rectangle(curBBox,fillColor,outlineColor,width)
     else:
-        draw.rounded_rectangle(rect._toBBox(),border_radius,fillColor,outlineColor,width)
+        draw.rounded_rectangle(curBBox,border_radius,fillColor,outlineColor,width)
 
 def draw_line(surface:Surface,color:color,start_pos:tuple[number,number],end_pos:tuple[number,number],width:int=1) -> None:
     PIL.ImageDraw.Draw(surface._image).line([start_pos,end_pos],color,width)
@@ -94,8 +110,10 @@ def draw_circle(
     draw_top_right:bool=False,draw_top_left:bool=False,draw_bottom_left:bool=False,draw_bottom_right:bool=False
 ) -> None:
 
-    draw = PIL.ImageDraw.Draw(surface._image)
     bbox = (center[0]-radius,center[1]-radius,center[0]+radius-1,center[1]+radius-1)
+    if _invalidBBoxCheck(bbox):
+        return
+    draw = PIL.ImageDraw.Draw(surface._image)
 
     if draw_top_right or draw_top_left or draw_bottom_left or draw_bottom_right:
 
@@ -115,8 +133,11 @@ def draw_circle(
         draw.ellipse(bbox,fillColor,outlineColor,width)
 
 def draw_arc(surface:Surface,color:color,rect:Rect,start_angle:float,stop_angle:float,width:int=1) -> None:
+    curBBox = rect._toBBox()
+    if _invalidBBoxCheck(curBBox):
+        return
     PIL.ImageDraw.Draw(surface._image).arc(
-        rect._toBBox(),
+        curBBox,
         360 - math.degrees(stop_angle),
         360 - math.degrees(start_angle),
         color,
@@ -130,6 +151,8 @@ def draw_polygon(surface:Surface,color:color,points:list[tuple[number,number]],w
     else:
         for i,point in enumerate(points):
             draw.line([point,points[(i+1)%len(points)]],color,width)
+
+
 
 def font_init() -> None:
     pass
@@ -154,11 +177,15 @@ class font_Font:
         PIL.ImageDraw.Draw(image).text((0,0),text,color,self._font)
         return _imgToSurf(image)
 
+
+
 def transform_smoothscale(surface:Surface,size:tuple[int,int]) -> Surface:
     return _imgToSurf(surface._image.resize(size))
 
 def transform_rotate(surface:Surface,angle:float) -> Surface:
     return _imgToSurf(surface._image.rotate(angle,expand=True))
+
+
 
 class mask_Mask:
 
