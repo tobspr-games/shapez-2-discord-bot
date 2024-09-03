@@ -1,14 +1,21 @@
-import globalInfos
 import math
 import typing
 
-NOTHING_CHAR = globalInfos.SHAPE_NOTHING_CHAR
+# hack for ease of copying this file into other projects
+try:
+    import globalInfos
+    NOTHING_CHAR = globalInfos.SHAPE_NOTHING_CHAR
+    SHAPE_LAYER_SEPARATOR = globalInfos.SHAPE_LAYER_SEPARATOR
+except ModuleNotFoundError:
+    NOTHING_CHAR = "-"
+    SHAPE_LAYER_SEPARATOR = ":"
+
 PIN_CHAR = "P"
 CRYSTAL_CHAR = "c"
 UNPAINTABLE_SHAPES = [CRYSTAL_CHAR,PIN_CHAR,NOTHING_CHAR]
 REPLACED_BY_CRYSTAL = [PIN_CHAR,NOTHING_CHAR]
 
-class Quadrant:
+class ShapePart:
 
     def __init__(self,shape:str,color:str) -> None:
         self.shape = shape
@@ -16,28 +23,28 @@ class Quadrant:
 
 class Shape:
 
-    def __init__(self,layers:list[list[Quadrant]]) -> None:
+    def __init__(self,layers:list[list[ShapePart]]) -> None:
         self.layers = layers
         self.numLayers = len(layers)
-        self.numQuads = len(layers[0])
+        self.numParts = len(layers[0])
 
     def fromListOfLayers(layers:list[str]) -> typing.Self:
-        newLayers:list[list[Quadrant]] = []
-        numQuads = int(len(layers[0])/2)
+        newLayers:list[list[ShapePart]] = []
+        numParts = int(len(layers[0])/2)
         for layer in layers:
             newLayers.append([])
-            for quadIndex in range(numQuads):
-                newLayers[-1].append(Quadrant(layer[quadIndex*2],layer[(quadIndex*2)+1]))
+            for partIndex in range(numParts):
+                newLayers[-1].append(ShapePart(layer[partIndex*2],layer[(partIndex*2)+1]))
         return Shape(newLayers)
 
     def fromShapeCode(shapeCode:str) -> typing.Self:
-        return Shape.fromListOfLayers(shapeCode.split(globalInfos.SHAPE_LAYER_SEPARATOR))
+        return Shape.fromListOfLayers(shapeCode.split(SHAPE_LAYER_SEPARATOR))
 
     def toListOfLayers(self) -> list[str]:
-        return ["".join(q.shape+q.color for q in l) for l in self.layers]
+        return ["".join(p.shape+p.color for p in l) for l in self.layers]
 
     def toShapeCode(self) -> str:
-        return globalInfos.SHAPE_LAYER_SEPARATOR.join(self.toListOfLayers())
+        return SHAPE_LAYER_SEPARATOR.join(self.toListOfLayers())
     
     def isEmpty(self) -> bool:
         return all(c == NOTHING_CHAR for c in "".join(self.toListOfLayers()))
@@ -48,13 +55,13 @@ class ShapeOperationConfig:
     def __init__(self,maxShapeLayers:int) -> None:
         self.maxShapeLayers = maxShapeLayers
 
-def _gravityConnected(quad1:Quadrant,quad2:Quadrant) -> bool:
-    if (quad1.shape in (NOTHING_CHAR,PIN_CHAR)) or (quad2.shape in (NOTHING_CHAR,PIN_CHAR)):
+def _gravityConnected(part1:ShapePart,part2:ShapePart) -> bool:
+    if (part1.shape in (NOTHING_CHAR,PIN_CHAR)) or (part2.shape in (NOTHING_CHAR,PIN_CHAR)):
         return False
     return True
 
-def _crystalsFused(quad1:Quadrant,quad2:Quadrant) -> bool:
-    if (quad1.shape == CRYSTAL_CHAR) and (quad2.shape == CRYSTAL_CHAR):
+def _crystalsFused(part1:ShapePart,part2:ShapePart) -> bool:
+    if (part1.shape == CRYSTAL_CHAR) and (part2.shape == CRYSTAL_CHAR):
         return True
     return False
 
@@ -65,7 +72,7 @@ def _getCorrectedIndex(list:list,index:int) -> int:
         return len(list) + index
     return index
 
-def _getConnectedSingleLayer(layer:list[Quadrant],index:int,connectedFunc:typing.Callable[[Quadrant,Quadrant],bool]) -> list[int]:
+def _getConnectedSingleLayer(layer:list[ShapePart],index:int,connectedFunc:typing.Callable[[ShapePart,ShapePart],bool]) -> list[int]:
 
     if layer[index].shape == NOTHING_CHAR:
         return []
@@ -92,109 +99,176 @@ def _getConnectedSingleLayer(layer:list[Quadrant],index:int,connectedFunc:typing
 
     return connected
 
-def _getConnectedMultiLayer(layers:list[list[Quadrant]],layerIndex:int,quadIndex:int,
-    connectedFunc:typing.Callable[[Quadrant,Quadrant],bool]) -> list[tuple[int,int]]:
+def _getConnectedMultiLayer(layers:list[list[ShapePart]],layerIndex:int,partIndex:int,
+    connectedFunc:typing.Callable[[ShapePart,ShapePart],bool]) -> list[tuple[int,int]]:
 
-    if layers[layerIndex][quadIndex].shape == NOTHING_CHAR:
+    if layers[layerIndex][partIndex].shape == NOTHING_CHAR:
         return []
 
-    connected = [(layerIndex,quadIndex)]
-    for curLayer,curQuad in connected:
+    connected = [(layerIndex,partIndex)]
+    for curLayer,curPart in connected:
 
         # same layer
-        for quadIndex in _getConnectedSingleLayer(layers[curLayer],curQuad,connectedFunc):
-            if (curLayer,quadIndex) not in connected:
-                connected.append((curLayer,quadIndex))
+        for partIndex in _getConnectedSingleLayer(layers[curLayer],curPart,connectedFunc):
+            if (curLayer,partIndex) not in connected:
+                connected.append((curLayer,partIndex))
 
         # layer below
-        toCheckLayer, toCheckQuad = curLayer-1, curQuad
-        if (curLayer > 0) and ((toCheckLayer,toCheckQuad) not in connected):
-            if connectedFunc(layers[curLayer][curQuad],layers[toCheckLayer][toCheckQuad]):
-                connected.append((toCheckLayer,toCheckQuad))
+        toCheckLayer, toCheckPart = curLayer-1, curPart
+        if (curLayer > 0) and ((toCheckLayer,toCheckPart) not in connected):
+            if connectedFunc(layers[curLayer][curPart],layers[toCheckLayer][toCheckPart]):
+                connected.append((toCheckLayer,toCheckPart))
 
         # layer above
-        toCheckLayer, toCheckQuad = curLayer+1, curQuad
-        if (curLayer < (len(layers)-1)) and ((toCheckLayer,toCheckQuad) not in connected):
-            if connectedFunc(layers[curLayer][curQuad],layers[toCheckLayer][toCheckQuad]):
-                connected.append((toCheckLayer,toCheckQuad))
+        toCheckLayer, toCheckPart = curLayer+1, curPart
+        if (curLayer < (len(layers)-1)) and ((toCheckLayer,toCheckPart) not in connected):
+            if connectedFunc(layers[curLayer][curPart],layers[toCheckLayer][toCheckPart]):
+                connected.append((toCheckLayer,toCheckPart))
 
     return connected
 
-def _breakCrystals(layers:list[list[Quadrant]],layerIndex:int,quadIndex:int) -> None:
-    for curLayer,curQuad in _getConnectedMultiLayer(layers,layerIndex,quadIndex,_crystalsFused):
-        layers[curLayer][curQuad] = Quadrant(NOTHING_CHAR,NOTHING_CHAR)
+def _breakCrystals(layers:list[list[ShapePart]],layerIndex:int,partIndex:int) -> None:
+    for curLayer,curPart in _getConnectedMultiLayer(layers,layerIndex,partIndex,_crystalsFused):
+        layers[curLayer][curPart] = ShapePart(NOTHING_CHAR,NOTHING_CHAR)
 
-# to do (in the future) : decide what to do in case of two crystals connected vertically above an empty quadrant : do they stick or both break
-def _makeLayersFall(layers:list[list[Quadrant]]) -> list[list[Quadrant]]:
+def _makeLayersFall(layers:list[list[ShapePart]]) -> list[list[ShapePart]]:
 
-    def sepInGroups(layer:list[Quadrant]) -> list[list[int]]:
+    def sepInGroups(layer:list[ShapePart]) -> list[list[int]]:
         handledIndexes = []
         groups = []
-        for quadIndex,_ in enumerate(layer):
-            if quadIndex in handledIndexes:
+        for partIndex,_ in enumerate(layer):
+            if partIndex in handledIndexes:
                 continue
-            group = _getConnectedSingleLayer(layer,quadIndex,_gravityConnected)
+            group = _getConnectedSingleLayer(layer,partIndex,_gravityConnected)
             if group != []:
                 groups.append(group)
                 handledIndexes.extend(group)
         return groups
 
+    def isPartSupported(layerIndex:int,partIndex:int,visitedParts:list[tuple[int,int]]) -> bool:
+
+        if supportedPartStates[layerIndex][partIndex] is not None:
+            return supportedPartStates[layerIndex][partIndex]
+
+        curPart = layers[layerIndex][partIndex]
+
+        def inner() -> bool:
+
+            if layers[layerIndex][partIndex].shape == NOTHING_CHAR:
+                return False
+
+            if layerIndex == 0:
+                return True
+
+            toGiveVisitedParts = visitedParts + [(layerIndex,partIndex)]
+
+            partUnderneath = layerIndex-1, partIndex
+            if (
+                (partUnderneath not in visitedParts)
+                and isPartSupported(*partUnderneath,toGiveVisitedParts)
+            ):
+                return True
+
+            nextPartPos = layerIndex, _getCorrectedIndex(layers[layerIndex],partIndex+1)
+            if (
+                (nextPartPos not in visitedParts)
+                and _gravityConnected(curPart,layers[nextPartPos[0]][nextPartPos[1]])
+                and isPartSupported(*nextPartPos,toGiveVisitedParts)
+            ):
+                return True
+
+            prevPartPos = layerIndex, _getCorrectedIndex(layers[layerIndex],partIndex-1)
+            if (
+                (prevPartPos not in visitedParts)
+                and _gravityConnected(curPart,layers[prevPartPos[0]][prevPartPos[1]])
+                and isPartSupported(*prevPartPos,toGiveVisitedParts)
+            ):
+                return True
+
+            partAbove = layerIndex+1, partIndex
+            if (
+                (partAbove[0] < len(layers))
+                and (partAbove not in visitedParts)
+                and (_crystalsFused(curPart,layers[partAbove[0]][partAbove[1]]))
+                and isPartSupported(*partAbove,toGiveVisitedParts)
+            ):
+                return True
+
+            return False
+
+        result = inner()
+        supportedPartStates[layerIndex][partIndex] = result
+        return result
+
+    # first pass of calculating supported parts
+    supportedPartStates:list[list[bool|None]] = [[None for _ in range(len(layers[0]))] for _ in range(len(layers))]
     for layerIndex,layer in enumerate(layers):
+        for partIndex in range(len(layer)):
+            isPartSupported(layerIndex,partIndex,[])
+
+    # if a crystal is marked as unsupported it will fall and thus break
+    for layerIndex,layer in enumerate(layers):
+        for partIndex,part in enumerate(layer):
+            if (part.shape == CRYSTAL_CHAR) and (not supportedPartStates[layerIndex][partIndex]):
+                layer[partIndex] = ShapePart(NOTHING_CHAR,NOTHING_CHAR)
+
+    # second pass of calculating supported parts since crystals breaking could have changed the state of other parts
+    supportedPartStates:list[list[bool|None]] = [[None for _ in range(len(layers[0]))] for _ in range(len(layers))]
+    for layerIndex,layer in enumerate(layers):
+        for partIndex in range(len(layer)):
+            isPartSupported(layerIndex,partIndex,[])
+
+    for layerIndex,layer in enumerate(layers):
+
         if layerIndex == 0:
             continue
 
-        for group in sepInGroups(layer): # first pass : break crystals
-            fall = True
-            for quadIndex in group:
-                if layers[layerIndex-1][quadIndex].shape != NOTHING_CHAR:
-                    fall = False
-                    break
-            if fall:
-                for quadIndex in group:
-                    if layer[quadIndex].shape == CRYSTAL_CHAR:
-                        layer[quadIndex] = Quadrant(NOTHING_CHAR,NOTHING_CHAR)
+        for group in sepInGroups(layer):
 
-        for group in sepInGroups(layer): # second pass : make layers fall with removed crystals
-            for layerIndex2 in range(layerIndex,0,-1):
+            if any(supportedPartStates[layerIndex][p] for p in group):
+                continue
+
+            for fallToLayerIndex in range(layerIndex,-1,-1):
+                if fallToLayerIndex == 0:
+                    break
                 fall = True
-                for quadIndex in group:
-                    if layers[layerIndex2-1][quadIndex].shape != NOTHING_CHAR:
+                for partIndex in group:
+                    if layers[fallToLayerIndex-1][partIndex].shape != NOTHING_CHAR:
                         fall = False
                         break
                 if not fall:
                     break
-                for quadIndex in group:
-                    layers[layerIndex2-1][quadIndex] = layers[layerIndex2][quadIndex]
-                    layers[layerIndex2][quadIndex] = Quadrant(NOTHING_CHAR,NOTHING_CHAR)
+
+            for partIndex in group:
+                layers[fallToLayerIndex][partIndex] = layers[layerIndex][partIndex]
+                layers[layerIndex][partIndex] = ShapePart(NOTHING_CHAR,NOTHING_CHAR)
 
     return layers
 
-def _cleanUpEmptyUpperLayers(layers:list[list[Quadrant]]) -> list[list[Quadrant]]:
-    if len(layers) == 1:
-        return layers
+def _cleanUpEmptyUpperLayers(layers:list[list[ShapePart]]) -> list[list[ShapePart]]:
     for i in range(len(layers)-1,-1,-1):
-        if any((q.shape != NOTHING_CHAR) for q in layers[i]):
+        if any((p.shape != NOTHING_CHAR) for p in layers[i]):
             break
     return layers[:i+1]
 
-def _differentNumQuadsUnsupported(func):
-    def wrapper(*args,**kwargs) -> None:
+def _differentNumPartsUnsupported(func:typing.Callable[...,typing.Any]):
+    def wrapper(*args,**kwargs) -> typing.Any:
         shapes:list[Shape] = []
         for arg in args:
             if type(arg) == Shape:
                 shapes.append(arg)
         if shapes != []:
-            expected = shapes[0].numQuads
+            expected = shapes[0].numParts
             for shape in shapes[1:]:
-                if shape.numQuads != expected:
+                if shape.numParts != expected:
                     raise InvalidOperationInputs(
-                        f"Shapes with differing number of quadrants per layer are not supported for operation '{func.__name__}'")
+                        f"Shapes with differing number of parts per layer are not supported for operation '{func.__name__}'")
         return func(*args,**kwargs)
     return wrapper
 
 def cut(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
-    takeQuads = math.ceil(shape.numQuads/2)
-    cutPoints = [(0,shape.numQuads-1),(shape.numQuads-takeQuads,shape.numQuads-takeQuads-1)]
+    takeParts = math.ceil(shape.numParts/2)
+    cutPoints = [(0,shape.numParts-1),(shape.numParts-takeParts,shape.numParts-takeParts-1)]
     layers = shape.layers
     for layerIndex,layer in enumerate(layers):
         for cutPoint in cutPoints:
@@ -203,8 +277,8 @@ def cut(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     shapeA = []
     shapeB = []
     for layer in layers:
-        shapeA.append([*([Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*(shape.numQuads-takeQuads)),*(layer[-takeQuads:])])
-        shapeB.append([*(layer[:-takeQuads]),*([Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*(takeQuads))])
+        shapeA.append([*([ShapePart(NOTHING_CHAR,NOTHING_CHAR)]*(shape.numParts-takeParts)),*(layer[-takeParts:])])
+        shapeB.append([*(layer[:-takeParts]),*([ShapePart(NOTHING_CHAR,NOTHING_CHAR)]*(takeParts))])
     shapeA, shapeB = [_cleanUpEmptyUpperLayers(_makeLayersFall(s)) for s in (shapeA,shapeB)]
     return [Shape(shapeA),Shape(shapeB)]
 
@@ -224,38 +298,37 @@ def rotate90CCW(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     return [Shape(newLayers)]
 
 def rotate180(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
-    takeQuads = math.ceil(shape.numQuads/2)
+    takeParts = math.ceil(shape.numParts/2)
     newLayers = []
     for layer in shape.layers:
-        newLayers.append([*(layer[takeQuads:]),*(layer[:takeQuads])])
+        newLayers.append([*(layer[takeParts:]),*(layer[:takeParts])])
     return [Shape(newLayers)]
 
-@_differentNumQuadsUnsupported
+@_differentNumPartsUnsupported
 def swapHalves(shapeA:Shape,shapeB:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     numLayers = max(shapeA.numLayers,shapeB.numLayers)
-    takeQuads = math.ceil(shapeA.numQuads/2)
+    takeParts = math.ceil(shapeA.numParts/2)
     shapeACut, shapeBCut = cut(shapeA,config=config), cut(shapeB,config=config)
-    shapeACut = [[*s.layers,*([[Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*shapeA.numQuads]*(numLayers-len(s.layers)))] for s in shapeACut]
-    shapeBCut = [[*s.layers,*([[Quadrant(NOTHING_CHAR,NOTHING_CHAR)]*shapeB.numQuads]*(numLayers-len(s.layers)))] for s in shapeBCut]
+    shapeACut = [[*s.layers,*([[ShapePart(NOTHING_CHAR,NOTHING_CHAR)]*shapeA.numParts]*(numLayers-len(s.layers)))] for s in shapeACut]
+    shapeBCut = [[*s.layers,*([[ShapePart(NOTHING_CHAR,NOTHING_CHAR)]*shapeB.numParts]*(numLayers-len(s.layers)))] for s in shapeBCut]
     returnShapeA = []
     returnShapeB = []
     for layerA0,layerA1,layerB0,layerB1 in zip(*shapeACut,*shapeBCut):
-        returnShapeA.append([*(layerA1[:-takeQuads]),*(layerB0[-takeQuads:])])
-        returnShapeB.append([*(layerB1[:-takeQuads]),*(layerA0[-takeQuads:])])
+        returnShapeA.append([*(layerA1[:-takeParts]),*(layerB0[-takeParts:])])
+        returnShapeB.append([*(layerB1[:-takeParts]),*(layerA0[-takeParts:])])
     returnShapeA, returnShapeB = _cleanUpEmptyUpperLayers(returnShapeA),_cleanUpEmptyUpperLayers(returnShapeB)
     return [Shape(returnShapeA),Shape(returnShapeB)]
 
-@_differentNumQuadsUnsupported
+@_differentNumPartsUnsupported
 def stack(bottomShape:Shape,topShape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
-    newTopShape = [[Quadrant(NOTHING_CHAR,NOTHING_CHAR) if q.shape == CRYSTAL_CHAR else q for q in l] for l in topShape.layers]
-    newLayers = [*bottomShape.layers,*newTopShape]
+    newLayers = bottomShape.layers + [[ShapePart(NOTHING_CHAR,NOTHING_CHAR) for _ in range(bottomShape.numParts)]] + topShape.layers
     newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
     newLayers = newLayers[:config.maxShapeLayers]
     return [Shape(newLayers)]
 
 def topPaint(shape:Shape,color:str,*,config:ShapeOperationConfig) -> list[Shape]:
     newLayers = shape.layers[:-1]
-    newLayers.append([Quadrant(q.shape,q.color if q.shape in UNPAINTABLE_SHAPES else color) for q in shape.layers[-1]])
+    newLayers.append([ShapePart(p.shape,p.color if p.shape in UNPAINTABLE_SHAPES else color) for p in shape.layers[-1]])
     return [Shape(newLayers)]
 
 def pushPin(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
@@ -263,23 +336,23 @@ def pushPin(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     layers = shape.layers
     addedPins = []
 
-    for quad in layers[0]:
-        if quad.shape == NOTHING_CHAR:
-            addedPins.append(Quadrant(NOTHING_CHAR,NOTHING_CHAR))
+    for part in layers[0]:
+        if part.shape == NOTHING_CHAR:
+            addedPins.append(ShapePart(NOTHING_CHAR,NOTHING_CHAR))
         else:
-            addedPins.append(Quadrant(PIN_CHAR,NOTHING_CHAR))
+            addedPins.append(ShapePart(PIN_CHAR,NOTHING_CHAR))
 
     if len(layers) < config.maxShapeLayers:
         newLayers = [addedPins,*layers]
     else:
         newLayers = [addedPins,*(layers[:config.maxShapeLayers-1])]
         removedLayer = layers[config.maxShapeLayers-1]
-        for quadIndex,quad in enumerate(newLayers[config.maxShapeLayers-1]):
-            if _crystalsFused(quad,removedLayer[quadIndex]):
-                _breakCrystals(newLayers,config.maxShapeLayers-1,quadIndex)
+        for partIndex,part in enumerate(newLayers[config.maxShapeLayers-1]):
+            if _crystalsFused(part,removedLayer[partIndex]):
+                _breakCrystals(newLayers,config.maxShapeLayers-1,partIndex)
         newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
 
     return [Shape(newLayers)]
 
 def genCrystal(shape:Shape,color:str,*,config:ShapeOperationConfig) -> list[Shape]:
-    return [Shape([[Quadrant(CRYSTAL_CHAR,color) if q.shape in REPLACED_BY_CRYSTAL else q for q in l] for l in shape.layers])]
+    return [Shape([[ShapePart(CRYSTAL_CHAR,color) if p.shape in REPLACED_BY_CRYSTAL else p for p in l] for l in shape.layers])]

@@ -1,3 +1,8 @@
+## 03 Sep 24
+- Remove latest public version constant in game infos
+- Rename all instances of 'quadrant' to 'shape part' in shape operations
+- Rewrite 'make layers fall' function in shape operations to allow crystals to be vertically supported by other crystals
+
 ## 27 Aug 24
 - Update for 0.0.8-rc2 :
   - Update buildings, icons, islands, translations

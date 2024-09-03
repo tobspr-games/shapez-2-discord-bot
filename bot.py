@@ -946,7 +946,7 @@ def runDiscordBot() -> None:
     @tree.command(name="change-blueprint-version",description="Change a blueprint's version")
     @discord.app_commands.describe(
         blueprint=globalInfos.SLASH_CMD_BP_PARAM_DESC,
-        version=f"The blueprint version number (latest public : {gameInfos.versions.LATEST_PUBLIC_GAME_VERSION}, latest patreon only : {gameInfos.versions.LATEST_GAME_VERSION})",
+        version=f"The blueprint version number (latest : {gameInfos.versions.LATEST_GAME_VERSION})",
         blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC,
         advanced="Whether or not to fully decode and encode the blueprint"
     )
