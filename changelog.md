@@ -1,3 +1,35 @@
+## 08 Apr 25
+- Update for 0.0.9 :
+  - Add versions in game infos
+    - Refactor versions module to change `alphaXX` to `0.0.0-alphaXX`
+  - Update buildings, translations, islands
+    - Remove hub from additional buildings
+    - Add island groups functionality
+  - Update blueprint additional data formats :
+    - Support for new global wire transmitter
+    - Add global wire transmitter migration
+    - Change additional data key for islands to `"S"`
+    - Change default island additional data from `"AA=="` to `null`
+    - Support for new space belts/pipes/tunnels/rails
+    - Add space belts/pipes/rails migration
+    - Remove train loaders, unloaders and stops
+- Use @classmethod decorators in shape operations module
+- Reword some error messages in shape code generator
+- Add `player-level-goals.set` to /msg commands
+- Change `quad` to `part` in variable names of shape code generator
+- Make pin push in shape operations do gravity checks even if the shape has less layers than the max allowed
+- Prevent antispam from activating on messages with no text content (i.e. consists of only attachments)
+- Add tip to use the /view-shapes command if the shape viewer is used publicly and triggers an error multiple times in a row
+- Upgrade to discord.py 2.5.2
+- Add quick actions buttons to antispam alert messages
+- Change `runtime.txt` to `.python-version` for heroku
+- Upgrade to python 3.13
+- Upgrade to Pillow 11.1.0
+- Remove storing the binary version of building blueprints as it's only used in decoding and is overridden with the latest version when encoding
+- Fix typo in /msg play
+- Fix typo and outdated example in operation graph doc
+- Fix error when external user apps send messages
+
 ## 03 Sep 24
 - Remove latest public version constant in game infos
 - Rename all instances of 'quadrant' to 'shape part' in shape operations

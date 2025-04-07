@@ -9,7 +9,7 @@ Optional parameters : [public] [see_shape_vars] [spoiler] [color_skin] [max_shap
 
 ## Shape variables
 
-In this command, "shape variables" are used to contain shape codes either defined by the user or by the result of an operation. Shape variables are simply a positive integer. A shape variable can't be used as an input multiple times and can't be asigned to/used as an output multiple times. They can also not be used as an input if they haven't be asigned a value (by manual definition or result of an operation). However, if a variable is only used as output and not as input it will automatically be considered a "final output" and put at the bottom of the graph.
+In this command, "shape variables" are used to contain shape codes either defined by the user or by the result of an operation. Shape variables are simply a positive integer. A shape variable can't be used as an input multiple times and can't be asigned to/used as an output multiple times. They can also not be used as an input if they haven't been asigned a value (by manual definition or result of an operation). However, if a variable is only used as output and not as input it will automatically be considered a "final output" and put at the bottom of the graph.
 
 ## Instructions
 
@@ -19,7 +19,7 @@ The `instructions` parameter is a list of instructions separated by `;`. An inst
 Examples : `1=CuCuCuCu`, `5=R:C+fill`, `3,8=SuSuSuSu+cut`, `1,2,3,4,5,6,7,8=C:C+fill+qcut+lsep`
 
 - **Operation** : An operation is of the syntax `inputShapeVariables:operation:outputShapeVariables`. The in- and output shape variables sections contain shape variables separated by `,`. The operation section is the identifier for the desired operation. The input variables will be passed on to the operation and its outputs will be assigned to the output variables. Therefore, the number of in- and output variables given must match the number of in- and outputs of the operation. Note : some operations take a color in input, the corresponding input must be the color's one letter code.\
-Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:sh:4,21`, `6,r:paint:11`
+Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:swap:4,21`, `6,r:paint:11`
 
 ## Operations
 

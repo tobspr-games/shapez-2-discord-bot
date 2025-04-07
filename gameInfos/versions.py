@@ -1,56 +1,217 @@
 GAME_VERSIONS = {
-    1005 : ["a1","a2","a3"],
-    1008 : ["a4"],
-    1009 : ["a5"],
-    1013 : ["a6"],
-    1015 : ["a6.1","a6.2"],
-    1018 : ["a7"],
-    1019 : ["a7.1","a7.2","a7.3"],
-    1022 : ["a7.4"],
-    1024 : ["a8"],
-    1027 : ["a9","a10","a10.1","a10.2"],
-    1029 : ["a11"],
-    1030 : ["a12d","a12"],
-    1031 : ["a13d","a13","a13.5d","a13.6d","a13.7d","a14d","a14.1d"],
-    1032 : ["a14.2d","a14.3d","a15d","a15.1d","a15.2d","a15.3d"],
-    1033 : ["a15.2","a15.3d"],
-    1036 : ["a16"],
-    1038 : ["a16","a16.1"],
-    1040 : ["a17"],
-    1042 : ["a18"],
-    1045 : ["a19"],
-    1057 : ["a20"],
-    1064 : ["a21","a21.1"],
-    1067 : ["a22.2"],
-    1071 : ["a22.3","a22.4"],
-    99999 : ["a22.4"],
-    1082 : ["a23","a23.1"],
-    1088 : ["a23.2"],
-    1089 : ["0.0.1"],
-    1091 : ["0.0.2"],
-    1094 : ["0.0.3","0.0.4","0.0.5"],
-    1095 : ["0.0.6","0.0.7","0.0.8"]
+    1005 : [
+        "0.0.0-alpha1",
+        "0.0.0-alpha2",
+        "0.0.0-alpha3"
+    ],
+    1008 : [
+        "0.0.0-alpha4"
+    ],
+    1009 : [
+        "0.0.0-alpha5"
+    ],
+    1013 : [
+        "0.0.0-alpha6"
+    ],
+    1015 : [
+        "0.0.0-alpha6.1",
+        "0.0.0-alpha6.2"
+    ],
+    1018 : [
+        "0.0.0-alpha7"
+    ],
+    1019 : [
+        "0.0.0-alpha7.1",
+        "0.0.0-alpha7.2",
+        "0.0.0-alpha7.3"
+    ],
+    1022 : [
+        "0.0.0-alpha7.4"
+    ],
+    1024 : [
+        "0.0.0-alpha8"
+    ],
+    1027 : [
+        "0.0.0-alpha9",
+        "0.0.0-alpha10",
+        "0.0.0-alpha10.1",
+        "0.0.0-alpha10.2"
+    ],
+    1029 : [
+        "0.0.0-alpha11"
+    ],
+    1030 : [
+        "0.0.0-alpha12-demo",
+        "0.0.0-alpha12"
+    ],
+    1031 : [
+        "0.0.0-alpha13-demo",
+        "0.0.0-alpha13",
+        "0.0.0-alpha13.5-demo",
+        "0.0.0-alpha13.6-demo",
+        "0.0.0-alpha13.7-demo",
+        "0.0.0-alpha14-demo",
+        "0.0.0-alpha14.1-demo"
+    ],
+    1032 : [
+        "0.0.0-alpha14.2-demo",
+        "0.0.0-alpha14.3-demo",
+        "0.0.0-alpha15-demo",
+        "0.0.0-alpha15.1-demo",
+        "0.0.0-alpha15.2-demo",
+        "0.0.0-alpha15.3-demo"
+    ],
+    1033 : [
+        "0.0.0-alpha15.2",
+        "0.0.0-alpha15.3-demo"
+    ],
+    1036 : [
+        "0.0.0-alpha16"
+    ],
+    1038 : [
+        "0.0.0-alpha16",
+        "0.0.0-alpha16.1"
+    ],
+    1040 : [
+        "0.0.0-alpha17"
+    ],
+    1042 : [
+        "0.0.0-alpha18"
+    ],
+    1045 : [
+        "0.0.0-alpha19"
+    ],
+    1057 : [
+        "0.0.0-alpha20"
+    ],
+    1064 : [
+        "0.0.0-alpha21",
+        "0.0.0-alpha21.1"
+    ],
+    1067 : [
+        "0.0.0-alpha22.2"
+    ],
+    1071 : [
+        "0.0.0-alpha22.3",
+        "0.0.0-alpha22.4"
+    ],
+    99999 : [
+        "0.0.0-alpha22.4"
+    ],
+    1082 : [
+        "0.0.0-alpha23",
+        "0.0.0-alpha23.1"
+    ],
+    1088 : [
+        "0.0.0-alpha23.2"
+    ],
+    1089 : [
+        "0.0.1"
+    ],
+    1091 : [
+        "0.0.2"
+    ],
+    1094 : [
+        "0.0.3",
+        "0.0.4",
+        "0.0.5"
+    ],
+    1095 : [
+        "0.0.6",
+        "0.0.7",
+        "0.0.8",
+        "0.0.8-rc2",
+        "0.0.8-rc3"
+    ],
+    1103 : [
+        "0.0.9-rc1"
+    ],
+    1105 : [
+        "0.0.9-rc2",
+        "0.0.9-rc3",
+        "0.0.9-rc4",
+        "0.0.9-rc5",
+        "0.0.9-rc6",
+        "0.0.9-rc7"
+    ]
 }
-LATEST_GAME_VERSION = next(iter(reversed(GAME_VERSIONS.keys())))
-LATEST_MAJOR_VERSION = 1
+LATEST_GAME_VERSION = list(GAME_VERSIONS.keys())[-1]
+LATEST_MAJOR_VERSION = 2
 
 BP_VERSION_REACTION_A = "\U0001f1e6"
+BP_VERSION_REACTION_C = "\U0001f1e8"
 BP_VERSION_REACTION_D = "\U0001f1e9"
-BP_VERSION_REACTION_DOT = "\u23fa"
+BP_VERSION_REACTION_R = "\U0001f1f7"
+BP_VERSION_REACTION_DOT_1 = "\u23fa"
 BP_VERSION_REACTION_DOT_2 = 1261037521496965202
-BP_VERSION_REACTION_UNITS = {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)}
-BP_VERSION_REACTION_TENS = {str(i) : v for i,v in enumerate([
-    1159909533074866286,1159909535872471162,1159909537944457226,
-    1159909542193270824,1159909546735702108,1159909549323587757,
-    1159909551697576056,1159909554532913203,1159909556336468008,
-    1159909559066964110
-])}
-BP_VERSION_REACTION_TENTHS = {str(i) : v for i,v in enumerate([
+BP_VERSION_REACTION_DOT_3 = 1333165681281339503
+BP_VERSION_REACTION_DIGITS_1 = {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)}
+BP_VERSION_REACTION_DIGITS_2 = {str(i) : v for i,v in enumerate([
     1159909769876877352,1159909772133400707,1159909773643358228,
     1159909775526592512,1159909784305283133,1159909786956087326,
     1159909788130476124,1159909789741105282,1159909792106676405,
     1159909793578877028
 ])}
+BP_VERSION_REACTION_DIGITS_3 = {str(i) : v for i,v in enumerate([
+    1159909533074866286,1159909535872471162,1159909537944457226,
+    1159909542193270824,1159909546735702108,1159909549323587757,
+    1159909551697576056,1159909554532913203,1159909556336468008,
+    1159909559066964110
+])}
+BP_VERSION_REACTION_DIGITS_4 = {str(i) : v for i,v in enumerate([
+    1333173576563687516,1333173578148876319,1333173580166463569,
+    1333173581474959372,1333173589674954832,1333173591365255329,
+    1333173593269469244,1333173594930413579,1333173596901867530,
+    1333173598407626752
+])}
+BP_VERSION_REACTION_DIGITS_5 = {str(i) : v for i,v in enumerate([
+    1333173698345177138,1333173700429746297,1333173701830643847,
+    1333173704078921842,1333173705756512297,1333173708008849540,
+    1333173709531250708,1333173712148627516,1333173713822286006,
+    1333173715554275430
+])}
+BP_VERSION_REACTION_DIGITS_6 = {str(i) : v for i,v in enumerate([
+    1333173795329933424,1333173796936482897,1333173798458888262,
+    1333173800145129523,1333173801659400326,1333173803358093393,
+    1333173805409107968,1333173807095218248,1333173808609361940,
+    1333173811171954800
+])}
+
+def _getDecomposedVersionId(versionId:str) -> dict[str,list[str]|dict|bool]:
+
+    output = {}
+
+    mainSplits = versionId.split("-")
+
+    mainNumber = mainSplits.pop(0)
+    output["main"] = mainNumber.split(".")
+
+    if len(mainSplits) > 0:
+
+        suffix = mainSplits[0]
+        if suffix.startswith(("alpha","rc")):
+            mainSplits.pop(0)
+
+            if suffix.startswith("alpha"):
+                suffixType = "alpha"
+                suffixNum = suffix.removeprefix("alpha")
+            else:
+                suffixType = "rc"
+                suffixNum = suffix.removeprefix("rc")
+            suffixNumSplit = suffixNum.split(".")
+            suffixNumOutput = [[c for c in suffixNumSplit[0]]]
+            if len(suffixNumSplit) > 1:
+                suffixNumOutput.append(suffixNumSplit[1])
+
+            output["suffix"] = {
+                "type" : suffixType,
+                "num" : suffixNumOutput
+            }
+
+    if len(mainSplits) > 0:
+        output["demo"] = True
+
+    return output
 
 def versionNumToText(version:int,returnAll:bool=False) -> None|str|list[str]:
 
@@ -66,19 +227,21 @@ def versionNumToText(version:int,returnAll:bool=False) -> None|str|list[str]:
     for versionText in versionTexts:
         output = ""
 
-        if versionText[0] == "a":
+        decomposed = _getDecomposedVersionId(versionText)
 
-            output += "Alpha "
-            versionText = versionText[1:]
+        output += ".".join(decomposed["main"])
 
-            if versionText[-1] == "d":
-                output += versionText[:-1] + " demo"
+        if decomposed.get("suffix") is not None:
+            if decomposed["suffix"]["type"] == "alpha":
+                output += " Alpha "
             else:
-                output += versionText
+                output += " RC "
+            output += "".join(decomposed["suffix"]["num"][0])
+            if len(decomposed["suffix"]["num"]) > 1:
+                output += "." + decomposed["suffix"]["num"][1]
 
-        else:
-
-            output += versionText
+        if decomposed.get("demo"):
+            output += " Demo"
 
         outputs.append(output)
 
@@ -96,37 +259,29 @@ def versionNumToReactions(version:int) -> None|list[str|int]:
 
     versionText = versionTexts[-1]
 
-    if versionText[0] == "a":
+    decomposed = _getDecomposedVersionId(versionText)
 
-        output = [BP_VERSION_REACTION_A]
-        versionText = versionText[1:]
+    output = [
+        BP_VERSION_REACTION_DIGITS_1[decomposed["main"][0]],
+        BP_VERSION_REACTION_DOT_1,
+        BP_VERSION_REACTION_DIGITS_2[decomposed["main"][1]],
+        BP_VERSION_REACTION_DOT_2,
+        BP_VERSION_REACTION_DIGITS_3[decomposed["main"][2]]
+    ]
 
-        suffix = None
-        if versionText[-1] == "d":
-            suffix = BP_VERSION_REACTION_D
-            versionText = versionText[:-1]
+    if decomposed.get("suffix") is not None:
+        if decomposed["suffix"]["type"] == "alpha":
+            output.append(BP_VERSION_REACTION_A)
+        else:
+            output.extend([BP_VERSION_REACTION_R,BP_VERSION_REACTION_C])
+        if len(decomposed["suffix"]["num"][0]) > 1:
+            output.append(BP_VERSION_REACTION_DIGITS_4[decomposed["suffix"]["num"][0][0]])
+        output.append(BP_VERSION_REACTION_DIGITS_5[decomposed["suffix"]["num"][0][-1]])
+        if len(decomposed["suffix"]["num"]) > 1:
+            output.append(BP_VERSION_REACTION_DOT_3)
+            output.append(BP_VERSION_REACTION_DIGITS_6[decomposed["suffix"]["num"][1]])
 
-        split = versionText.split(".")
-
-        if len(split[0]) > 1:
-            output.append(BP_VERSION_REACTION_TENS[split[0][0]])
-        output.append(BP_VERSION_REACTION_UNITS[split[0][-1]])
-
-        if len(split) > 1:
-            output.append(BP_VERSION_REACTION_DOT)
-            output.append(BP_VERSION_REACTION_TENTHS[split[1]])
-
-        if suffix is not None:
-            output.append(suffix)
-
-    else:
-
-        output = [
-            BP_VERSION_REACTION_TENS[versionText[0]],
-            BP_VERSION_REACTION_DOT,
-            BP_VERSION_REACTION_UNITS[versionText[2]],
-            BP_VERSION_REACTION_DOT_2,
-            BP_VERSION_REACTION_TENTHS[versionText[4]]
-        ]
+    if decomposed.get("demo"):
+        output.append(BP_VERSION_REACTION_D)
 
     return output

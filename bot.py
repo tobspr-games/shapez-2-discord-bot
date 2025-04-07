@@ -34,7 +34,7 @@ async def globalLogMessage(message:str,sendInCodeBlock:bool=False) -> None:
 async def globalLogError() -> None:
     await globalLogMessage(("".join(traceback.format_exception(*sys.exc_info())))[:-1],True)
 
-async def useShapeViewer(userMessage:str,sendErrors:bool) -> tuple[bool,str,tuple[discord.File,int]|None]:
+async def useShapeViewer(userMessage:str,sendErrors:bool,userId:int) -> tuple[bool,str,tuple[discord.File,int]|None]:
     try:
 
         response = responses.handleResponse(userMessage)
@@ -74,6 +74,23 @@ async def useShapeViewer(userMessage:str,sendErrors:bool) -> tuple[bool,str,tupl
                             for linkGroup in discord.utils.as_chunks(viewer3dLinks,globalInfos.SHAPES_PER_ROW)
                         )
                     )
+
+        curTime = getCurrentTime()
+        for user in list(shapeViewerLastErrors.keys()):
+            if (curTime-shapeViewerLastErrors[user]["timestamp"]) > datetime.timedelta(seconds=globalInfos.SHAPE_VIEWER_SLASH_CMD_TIP_TIME_INTERVAL_SECONDS):
+                shapeViewerLastErrors.pop(user)
+        if hasErrors and (not sendErrors):
+            curInfo = shapeViewerLastErrors.get(userId)
+            if curInfo is None:
+                shapeViewerLastErrors[userId] = {"count":1,"timestamp":curTime}
+            else:
+                curInfo["count"] += 1
+                curInfo["timestamp"] = curTime
+                if curInfo["count"] >= globalInfos.SHAPE_VIEWER_SLASH_CMD_TIP_NUM_ERRORS:
+                    msgParts.append("Tip : Use the </view-shapes:1132698874839044166> command to view error messages")
+                    shapeViewerLastErrors.pop(userId)
+        else:
+            shapeViewerLastErrors.pop(userId,None)
 
         responseMsg = "\n\n".join(msgParts)
 
@@ -138,10 +155,6 @@ class PermissionLvls:
 
 async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,interaction:discord.Interaction|None=None) -> bool:
 
-    IGNORE_MEMBERS_BEING_USERS = [
-        1008776202191634432 # automod
-    ]
-
     if message is not None:
 
         userId = message.author.id
@@ -149,19 +162,13 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         if message.guild is None:
             guildId = None
         else:
-
-            if type(message.author) == discord.User:
-                if userId in IGNORE_MEMBERS_BEING_USERS:
-                    return False
-                raise ValueError(
-                    f"Author ({userId} {message.author.mention})"
-                    f"of message ({message.id} {message.jump_url} )"
-                    f"is not a member despite being in a guild ({message.guild.id} {message.guild.name})"
-                )
-
             guildId = message.guild.id
-            userRoles = message.author.roles[1:]
-            adminPerm = message.author.guild_permissions.administrator
+            if type(message.author) == discord.User:
+                userRoles = []
+                adminPerm = False
+            else:
+                userRoles = message.author.roles[1:]
+                adminPerm = message.author.guild_permissions.administrator
 
     elif interaction is not None:
 
@@ -169,18 +176,12 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         channelId = interaction.channel_id
         guildId = interaction.guild_id
         if interaction.guild is not None:
-
             if type(interaction.user) == discord.User:
-                if userId in IGNORE_MEMBERS_BEING_USERS:
-                    return False
-                raise ValueError(
-                    f"Author ({userId} {interaction.user.mention})"
-                    f"of interaction (in channel {channelId})"
-                    f"is not a member despite being in a guild ({guildId} {interaction.guild.name})"
-                )
-
-            userRoles = interaction.user.roles[1:]
-            adminPerm = interaction.user.guild_permissions.administrator
+                userRoles = []
+                adminPerm = False
+            else:
+                userRoles = interaction.user.roles[1:]
+                adminPerm = interaction.user.guild_permissions.administrator
 
     else:
         raise ValueError("No message or interaction in 'hasPermission' function")
@@ -320,8 +321,13 @@ async def getBPFromStringOrFile(string:str|None,file:discord.Attachment|None) ->
             return None
     return toReturn.strip()
 
-def getCommandResponse(text:str,file:tuple[discord.File,int]|None,guild:discord.Guild|None,public:bool,
-    notInFileFormat:tuple[str,str]=("","")) -> dict[str,str|discord.File]:
+def getCommandResponse(
+    text:str,
+    file:tuple[discord.File,int]|None,
+    guild:discord.Guild|None,
+    public:bool,
+    notInFileFormat:tuple[str,str]=("","")
+) -> dict[str,str|discord.File]:
     kwargs = {}
 
     if len(notInFileFormat[0])+len(text)+len(notInFileFormat[1]) > globalInfos.MESSAGE_MAX_LENGTH:
@@ -347,10 +353,62 @@ def getCommandResponse(text:str,file:tuple[discord.File,int]|None,guild:discord.
 
     return kwargs
 
-# port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
-async def antiSpam(message:discord.Message) -> None|bool:
+class AntispamAlertButtons(discord.ui.View):
 
-    global antiSpamLastMessages
+    REASON_MSG = "Request by moderator from antispam alert"
+
+    def __init__(self,user:discord.User|discord.Member):
+        super().__init__()
+        self.user = user
+
+    @discord.ui.button(label="Send info DM",style=discord.ButtonStyle.blurple)
+    async def sendDMButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+        try:
+            await self.user.send(globalInfos.ANTISPAM_DM_MSG)
+            responseMsg = "Succesfully sent DM"
+        except discord.Forbidden:
+            responseMsg = "Failed to send DM"
+        await interaction.response.send_message(responseMsg,ephemeral=True)
+        self.children[0].disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(label="Un-timeout",style=discord.ButtonStyle.green)
+    async def unTimeoutButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+        try:
+            await self.user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
+            responseMsg = "Succesfully un-timed out user"
+        except (AttributeError,discord.Forbidden,discord.NotFound):
+            responseMsg = "Failed to un-timeout user"
+        await interaction.response.send_message(responseMsg,ephemeral=True)
+        self.children[1].disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(label="Kick",style=discord.ButtonStyle.red)
+    async def kickButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+        try:
+            await self.user.kick(reason=AntispamAlertButtons.REASON_MSG)
+            responseMsg = "Succesfully kicked user"
+        except (AttributeError,discord.Forbidden,discord.NotFound):
+            responseMsg = "Failed to kick user"
+        await interaction.response.send_message(responseMsg,ephemeral=True)
+        for i in range(4):
+            self.children[i].disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(label="Ban",style=discord.ButtonStyle.red)
+    async def banButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+        try:
+            await self.user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
+            responseMsg = "Succesfully banned user"
+        except (AttributeError,discord.Forbidden,discord.NotFound):
+            responseMsg = "Failed to ban user"
+        await interaction.response.send_message(responseMsg,ephemeral=True)
+        for i in range(4):
+            self.children[i].disabled = True
+        await interaction.message.edit(view=self)
+
+# port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
+async def antiSpam(message:discord.Message) -> bool|None:
 
     async def sendAlert() -> None:
 
@@ -367,7 +425,7 @@ async def antiSpam(message:discord.Message) -> None|bool:
         if msgContentFile is None:
             alertMsg += " <couldn't put message content in a file>"
 
-        await curAlertChannel.send(alertMsg,file=msgContentFile)
+        await curAlertChannel.send(alertMsg,file=msgContentFile,view=AntispamAlertButtons(message.author))
 
     if globalPaused:
         return
@@ -384,6 +442,9 @@ async def antiSpam(message:discord.Message) -> None|bool:
     curGuildSettings = await guildSettings.getGuildSettings(message.guild.id)
 
     if not curGuildSettings["antispamEnabled"]:
+        return
+
+    if message.content == "": # message consists of only attachments
         return
 
     userId = message.author.id
@@ -654,7 +715,7 @@ def runDiscordBot() -> None:
             if publicPerm:
 
                 # shape viewer
-                hasErrors, responseMsg, file = await useShapeViewer(message.content,False)
+                hasErrors, responseMsg, file = await useShapeViewer(message.content,False,message.author.id)
                 if hasErrors:
                     await message.add_reaction(globalInfos.INVALID_SHAPE_CODE_REACTION)
                 if (responseMsg != "") or (file is not None):
@@ -665,7 +726,7 @@ def runDiscordBot() -> None:
                 if autoMsgResult != []:
                     responseMsg = "\n".join(autoMsgResult)
                     try:
-                        await message.reply(safenString(responseMsg),mention_author=False)
+                        await message.reply(**getCommandResponse(responseMsg,None,message.guild,True),mention_author=False)
                     except discord.HTTPException: # error raised when og message was deleted
                         pass
 
@@ -937,7 +998,7 @@ def runDiscordBot() -> None:
             return
         await interaction.response.defer(ephemeral=True)
         if await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
-            _, responseMsg, file = await useShapeViewer(message,True)
+            _, responseMsg, file = await useShapeViewer(message,True,interaction.user.id)
         else:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
             file = None
@@ -1303,7 +1364,7 @@ def runDiscordBot() -> None:
                             utils.Rotation(0),
                             gameInfos.buildings.allBuildings["SandboxItemProducerDefaultInternalVariant"],
                             buildingExtra
-                        )],blueprints.getDefaultBlueprintIcons(blueprints.BUILDING_BP_TYPE),blueprintInfos[1])
+                        )],blueprints.getDefaultBlueprintIcons(blueprints.BUILDING_BP_TYPE))
                     ))
                     noErrors = True
                 except blueprints.BlueprintError as e:
@@ -1337,15 +1398,12 @@ def runDiscordBot() -> None:
                 curX += maxX + 1
 
             bpType = blueprints.BUILDING_BP_TYPE if toCreateBuildings else blueprints.ISLAND_BP_TYPE
-            kwargs = {}
-            if toCreateBuildings:
-                kwargs["binaryVersion"] = blueprintInfos[1]
             try:
                 responseMsg = blueprints.encodeBlueprint(blueprints.Blueprint(
                     *blueprintInfos,
                     bpType,
                     (blueprints.BuildingBlueprint if toCreateBuildings else blueprints.IslandBlueprint)
-                    (entryList,blueprints.getDefaultBlueprintIcons(bpType),**kwargs)
+                    (entryList,blueprints.getDefaultBlueprintIcons(bpType))
                 ))
                 noErrors = True
             except blueprints.BlueprintError as e:
@@ -1401,3 +1459,4 @@ msgCommandMessages:dict[str,str]
 antiSpamLastMessages:dict[tuple[int,int],dict[str,str|list[discord.Message]|int|datetime.datetime]] = {}
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
 msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}
+shapeViewerLastErrors:dict[int,dict[str,int|datetime.datetime]] = {}

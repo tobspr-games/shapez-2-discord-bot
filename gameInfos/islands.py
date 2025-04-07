@@ -31,7 +31,13 @@ class Island:
 def _loadIslands() -> dict[str,Island]:
 
     with open(globalInfos.GI_ISLANDS_PATH,encoding="utf-8") as f:
-        islandsRaw:dict[str,list[dict]] = json.load(f)
+        islandsRaw:dict[str,list[dict[str,dict|list[dict]]]] = json.load(f)
+
+    for islandGroup in islandsRaw["IslandGroups"]:
+        for island in islandGroup["Islands"]:
+            newIsland = islandGroup["Common"].copy()
+            newIsland.update(island)
+            islandsRaw["Islands"].append(newIsland)
 
     allIslands = {}
 

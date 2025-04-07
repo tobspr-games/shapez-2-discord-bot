@@ -31,6 +31,8 @@ SHAPE_NOTHING_CHAR = "-"
 SHAPE_CHAR_REPLACEMENT = {} # unused but kept just in case
 SHAPE_CONFIG_QUAD = "quad"
 SHAPE_CONFIG_HEX = "hex"
+SHAPE_VIEWER_SLASH_CMD_TIP_NUM_ERRORS = 4
+SHAPE_VIEWER_SLASH_CMD_TIP_TIME_INTERVAL_SECONDS = 30
 
 # display parameters
 SHAPES_PER_ROW = 8
@@ -50,6 +52,14 @@ GI_ICONS_PATH = "./gameInfos/icons.json"
 ANTISPAM_MSG_COUNT_TRESHOLD = 4
 ANTISPAM_TIMEOUT_SECONDS = 3600
 ANTISPAM_TIME_INTERVAL_SECONDS = 10
+ANTISPAM_DM_MSG = "\n".join([
+    "Hi,",
+    "",
+    "It seems like your account got hacked.",
+    "If you still have access to it, it is recommended to change your password as soon as possible.",
+    "",
+    "\u2014 Shape Bot 2 from the Shapez 2 server"
+])
 
 # other
 

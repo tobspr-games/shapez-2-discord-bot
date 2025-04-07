@@ -1,20 +1,162 @@
 {
-    "GameVersion": 1095,
-    "Islands": [
+    "GameVersion": 1105,
+    "IslandGroups": [
         {
-            "Id": "Layout_SpaceBeltNode",
-            "Tiles": [
-                {}
-            ],
-            "RemovedNotches": [],
-            "ReducedSides": [],
-            "BuildAreaOverride": [
+            "Common": {
+                "Title": "Space Belt",
+                "Tiles": [
+                    {}
+                ],
+                "RemovedNotches": [],
+                "ReducedSides": [],
+                "BuildAreaOverride": [
+                    {
+                        "Tile": {},
+                        "Rects": []
+                    }
+                ]
+            },
+            "Islands": [
                 {
-                    "Tile": {},
-                    "Rects": []
+                    "Id": "SpaceBelt_Forward"
+                },
+                {
+                    "Id": "SpaceBelt_LeftTurn"
+                },
+                {
+                    "Id": "SpaceBelt_RightTurn"
+                },
+                {
+                    "Id": "SpaceBelt_LeftFwdSplitter"
+                },
+                {
+                    "Id": "SpaceBelt_RightFwdSplitter"
+                },
+                {
+                    "Id": "SpaceBelt_YSplitter"
+                },
+                {
+                    "Id": "SpaceBelt_TripleSplitter"
+                },
+                {
+                    "Id": "SpaceBelt_RightFwdMerger"
+                },
+                {
+                    "Id": "SpaceBelt_LeftFwdMerger"
+                },
+                {
+                    "Id": "SpaceBelt_YMerger"
+                },
+                {
+                    "Id": "SpaceBelt_TripleMerger"
                 }
             ]
         },
+        {
+            "Common": {
+                "Title": "Space Pipe",
+                "Tiles": [
+                    {}
+                ],
+                "RemovedNotches": [],
+                "ReducedSides": [],
+                "BuildAreaOverride": [
+                    {
+                        "Tile": {},
+                        "Rects": []
+                    }
+                ]
+            },
+            "Islands": [
+                {
+                    "Id": "SpacePipe_Forward"
+                },
+                {
+                    "Id": "SpacePipe_LeftTurn"
+                },
+                {
+                    "Id": "SpacePipe_RightTurn"
+                },
+                {
+                    "Id": "SpacePipe_LeftFwdSplitter"
+                },
+                {
+                    "Id": "SpacePipe_RightFwdSplitter"
+                },
+                {
+                    "Id": "SpacePipe_YSplitter"
+                },
+                {
+                    "Id": "SpacePipe_TripleSplitter"
+                },
+                {
+                    "Id": "SpacePipe_RightFwdMerger"
+                },
+                {
+                    "Id": "SpacePipe_LeftFwdMerger"
+                },
+                {
+                    "Id": "SpacePipe_YMerger"
+                },
+                {
+                    "Id": "SpacePipe_TripleMerger"
+                }
+            ]
+        },
+        {
+            "Common": {
+                "Title": "Rail",
+                "Tiles": [
+                    {}
+                ],
+                "RemovedNotches": [],
+                "ReducedSides": [],
+                "BuildAreaOverride": [
+                    {
+                        "Tile": {},
+                        "Rects": []
+                    }
+                ],
+                "IslandUnitCost": 0
+            },
+            "Islands": [
+                {
+                    "Id": "Rail_Forward"
+                },
+                {
+                    "Id": "Rail_LeftTurn"
+                },
+                {
+                    "Id": "Rail_RightTurn"
+                },
+                {
+                    "Id": "Rail_LeftFwdSplitter"
+                },
+                {
+                    "Id": "Rail_RightFwdSplitter"
+                },
+                {
+                    "Id": "Rail_YSplitter"
+                },
+                {
+                    "Id": "Rail_TripleSplitter"
+                },
+                {
+                    "Id": "Rail_RightFwdMerger"
+                },
+                {
+                    "Id": "Rail_LeftFwdMerger"
+                },
+                {
+                    "Id": "Rail_YMerger"
+                },
+                {
+                    "Id": "Rail_TripleMerger"
+                }
+            ]
+        }
+    ],
+    "Islands": [
         {
             "Id": "Layout_SpaceBeltTunnel_Entrance",
             "Tiles": [
@@ -44,20 +186,6 @@
                 }
             ],
             "IslandUnitCost": 3
-        },
-        {
-            "Id": "Layout_SpacePipeNode",
-            "Tiles": [
-                {}
-            ],
-            "RemovedNotches": [],
-            "ReducedSides": [],
-            "BuildAreaOverride": [
-                {
-                    "Tile": {},
-                    "Rects": []
-                }
-            ]
         },
         {
             "Id": "Layout_SpacePipeTunnel_Entrance",
@@ -190,6 +318,22 @@
             "IslandUnitCost": 4
         },
         {
+            "Id": "Layout_Normal_3x1",
+            "Title": "3x1 Foundation",
+            "Tiles": [
+                {
+                    "X": -1
+                },
+                {},
+                {
+                    "X": 1
+                }
+            ],
+            "RemovedNotches": [],
+            "ReducedSides": [],
+            "IslandUnitCost": 6
+        },
+        {
             "Id": "Layout_Normal_3_L",
             "Title": "3 L Foundation",
             "Tiles": [
@@ -243,6 +387,33 @@
             "RemovedNotches": [],
             "ReducedSides": [],
             "IslandUnitCost": 8
+        },
+        {
+            "Id": "Layout_Normal_3x2",
+            "Title": "3x2 Foundation",
+            "Tiles": [
+                {
+                    "X": -1
+                },
+                {},
+                {
+                    "X": 1
+                },
+                {
+                    "X": -1,
+                    "Y": 1
+                },
+                {
+                    "Y": 1
+                },
+                {
+                    "X": 1,
+                    "Y": 1
+                }
+            ],
+            "RemovedNotches": [],
+            "ReducedSides": [],
+            "IslandUnitCost": 12
         },
         {
             "Id": "Layout_Normal_5_Cross",
@@ -303,21 +474,6 @@
             "RemovedNotches": [],
             "ReducedSides": [],
             "IslandUnitCost": 18
-        },
-        {
-            "Id": "Layout_RailNode",
-            "Tiles": [
-                {}
-            ],
-            "RemovedNotches": [],
-            "ReducedSides": [],
-            "BuildAreaOverride": [
-                {
-                    "Tile": {},
-                    "Rects": []
-                }
-            ],
-            "IslandUnitCost": 0
         },
         {
             "Id": "Layout_TrainLauncher",

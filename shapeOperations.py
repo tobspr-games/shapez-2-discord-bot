@@ -28,17 +28,19 @@ class Shape:
         self.numLayers = len(layers)
         self.numParts = len(layers[0])
 
-    def fromListOfLayers(layers:list[str]) -> typing.Self:
+    @classmethod
+    def fromListOfLayers(cls,layers:list[str]) -> typing.Self:
         newLayers:list[list[ShapePart]] = []
         numParts = int(len(layers[0])/2)
         for layer in layers:
             newLayers.append([])
             for partIndex in range(numParts):
                 newLayers[-1].append(ShapePart(layer[partIndex*2],layer[(partIndex*2)+1]))
-        return Shape(newLayers)
+        return cls(newLayers)
 
-    def fromShapeCode(shapeCode:str) -> typing.Self:
-        return Shape.fromListOfLayers(shapeCode.split(SHAPE_LAYER_SEPARATOR))
+    @classmethod
+    def fromShapeCode(cls,shapeCode:str) -> typing.Self:
+        return cls.fromListOfLayers(shapeCode.split(SHAPE_LAYER_SEPARATOR))
 
     def toListOfLayers(self) -> list[str]:
         return ["".join(p.shape+p.color for p in l) for l in self.layers]
@@ -252,7 +254,7 @@ def _cleanUpEmptyUpperLayers(layers:list[list[ShapePart]]) -> list[list[ShapePar
     return layers[:i+1]
 
 def _differentNumPartsUnsupported(func:typing.Callable[...,typing.Any]):
-    def wrapper(*args,**kwargs) -> typing.Any:
+    def wrapper(*args,**kwargs):
         shapes:list[Shape] = []
         for arg in args:
             if type(arg) == Shape:
@@ -347,10 +349,11 @@ def pushPin(shape:Shape,*,config:ShapeOperationConfig) -> list[Shape]:
     else:
         newLayers = [addedPins,*(layers[:config.maxShapeLayers-1])]
         removedLayer = layers[config.maxShapeLayers-1]
-        for partIndex,part in enumerate(newLayers[config.maxShapeLayers-1]):
+        for partIndex,part in enumerate(newLayers[-1]):
             if _crystalsFused(part,removedLayer[partIndex]):
                 _breakCrystals(newLayers,config.maxShapeLayers-1,partIndex)
-        newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
+
+    newLayers = _cleanUpEmptyUpperLayers(_makeLayersFall(newLayers))
 
     return [Shape(newLayers)]
 

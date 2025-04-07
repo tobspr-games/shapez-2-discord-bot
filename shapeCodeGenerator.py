@@ -74,7 +74,7 @@ def _verifyOnlyValidChars(layers:list[str],shapeConfig:str) -> tuple[str|None,bo
     for layerIndex,layer in enumerate(layers):
         for charIndex,char in enumerate(layer):
             if char not in [*COLOR_SHAPES[shapeConfig],*NO_COLOR_SHAPES[shapeConfig],*COLORS,NOTHING_CHAR]:
-                return f"Invalid char in layer {layerIndex+1} ({layer}), at char {charIndex+1} : '{char}'",False
+                return f"Invalid character in layer {layerIndex+1} ({layer}), at character {charIndex+1} : '{char}'",False
     return None,True
 
 def _verifyShapesAndColorsInRightPos(layers:list[str],shapeConfig:str) -> tuple[str|None,bool]:
@@ -82,7 +82,7 @@ def _verifyShapesAndColorsInRightPos(layers:list[str],shapeConfig:str) -> tuple[
         shapeMode = True
         lastChar = len(layer)-1
         for charIndex,char in enumerate(layer):
-            errorMsgStart = f"Char in layer {layerIndex+1} ({layer}) at char {charIndex+1} ({char})"
+            errorMsgStart = f"Character in layer {layerIndex+1} ({layer}) at character {charIndex+1} ({char})"
             if shapeMode:
                 if char not in [*COLOR_SHAPES[shapeConfig],*NO_COLOR_SHAPES[shapeConfig],NOTHING_CHAR]:
                     return f"{errorMsgStart} must be a shape or empty",False
@@ -107,7 +107,7 @@ def _verifyAllLayersHaveSameLen(layers:list[str]) -> tuple[str|None,bool]:
     expectedLayerLen = len(layers[0])
     for layerIndex,layer in enumerate(layers[1:]):
         if len(layer) != expectedLayerLen:
-            return f"Layer {layerIndex+2} ({layer}){f' (or 1 ({layers[0]}))' if layerIndex == 0 else ''} doesn't have the expected number of quadrants",False
+            return f"Layer {layerIndex+2} ({layer}){f' (or 1 ({layers[0]}))' if layerIndex == 0 else ''} doesn't have the expected number of parts",False
     return None,True
 
 def _isShapeEmpty(layers:list[str]) -> bool:
@@ -246,34 +246,34 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[tuple[list[str],str]|str
     if cutInParams:
         newShapeCodes = []
         for shape in shapeCodes:
-            numQuads = round(len(shape[0])/2)
-            takeQuads = math.ceil(numQuads/2)
+            numParts = round(len(shape[0])/2)
+            takeParts = math.ceil(numParts/2)
             shape1 = []
             shape2 = []
             for layer in shape:
-                shape1.append(f"{NOTHING_CHAR*((numQuads-takeQuads)*2)}{layer[-(takeQuads*2):]}")
-                shape2.append(f"{layer[:-(takeQuads*2)]}{NOTHING_CHAR*(takeQuads*2)}")
+                shape1.append(f"{NOTHING_CHAR*((numParts-takeParts)*2)}{layer[-(takeParts*2):]}")
+                shape2.append(f"{layer[:-(takeParts*2)]}{NOTHING_CHAR*(takeParts*2)}")
             newShapeCodes.extend([shape1,shape2])
 
     # handle qcut
     elif qcutInParams:
         newShapeCodes = []
         for shape in shapeCodes:
-            numQuads = round(len(shape[0])/2)
-            takeQuads = math.ceil(numQuads/2)
-            takeQuads1 = math.ceil(takeQuads/2)
-            takeQuads2 = takeQuads - takeQuads1
-            takeQuads3 = math.ceil((numQuads-takeQuads)/2)
-            takeQuads4 = numQuads - takeQuads - takeQuads3
+            numParts = round(len(shape[0])/2)
+            takeParts = math.ceil(numParts/2)
+            takeParts1 = math.ceil(takeParts/2)
+            takeParts2 = takeParts - takeParts1
+            takeParts3 = math.ceil((numParts-takeParts)/2)
+            takeParts4 = numParts - takeParts - takeParts3
             shape1 = []
             shape2 = []
             shape3 = []
             shape4 = []
             for layer in shape:
-                shape1.append(f"{layer[:takeQuads1*2]}{NOTHING_CHAR*((takeQuads2+takeQuads3+takeQuads4)*2)}")
-                shape2.append(f"{NOTHING_CHAR*(takeQuads1*2)}{layer[takeQuads1*2:(takeQuads1+takeQuads2)*2]}{NOTHING_CHAR*((takeQuads3+takeQuads4)*2)}")
-                shape3.append(f"{NOTHING_CHAR*((takeQuads1+takeQuads2)*2)}{layer[(takeQuads1+takeQuads2)*2:(takeQuads1+takeQuads2+takeQuads3)*2]}{NOTHING_CHAR*(takeQuads4*2)}")
-                shape4.append(f"{NOTHING_CHAR*((takeQuads1+takeQuads2+takeQuads3)*2)}{layer[(takeQuads1+takeQuads2+takeQuads3)*2:]}")
+                shape1.append(f"{layer[:takeParts1*2]}{NOTHING_CHAR*((takeParts2+takeParts3+takeParts4)*2)}")
+                shape2.append(f"{NOTHING_CHAR*(takeParts1*2)}{layer[takeParts1*2:(takeParts1+takeParts2)*2]}{NOTHING_CHAR*((takeParts3+takeParts4)*2)}")
+                shape3.append(f"{NOTHING_CHAR*((takeParts1+takeParts2)*2)}{layer[(takeParts1+takeParts2)*2:(takeParts1+takeParts2+takeParts3)*2]}{NOTHING_CHAR*(takeParts4*2)}")
+                shape4.append(f"{NOTHING_CHAR*((takeParts1+takeParts2+takeParts3)*2)}{layer[(takeParts1+takeParts2+takeParts3)*2:]}")
             newShapeCodes.extend([shape1,shape2,shape3,shape4])
     else:
         newShapeCodes = shapeCodes

@@ -10,6 +10,10 @@ import typing
 import math
 import binascii
 
+T = typing.TypeVar("T")
+T1 = typing.TypeVar("T1")
+T2 = typing.TypeVar("T2")
+
 PREFIX = "SHAPEZ2"
 SEPARATOR = "-"
 SUFFIX = "$"
@@ -33,36 +37,54 @@ BUILDING_IDS = {
     "wireGlobalSender" : gameInfos.buildings.allBuildings["WireGlobalTransmitterSenderInternalVariant"].id,
     "wireGlobalReceiver" : gameInfos.buildings.allBuildings["WireGlobalTransmitterReceiverInternalVariant"].id
 }
+ISLAND_PATH_TYPES = [
+    "Forward",
+    "LeftTurn",
+    "RightTurn",
+    "LeftFwdSplitter",
+    "RightFwdSplitter",
+    "YSplitter",
+    "TripleSplitter",
+    "RightFwdMerger",
+    "LeftFwdMerger",
+    "YMerger",
+    "TripleMerger"
+]
 ISLAND_IDS = {
-    "spaceBelt" : gameInfos.islands.allIslands["Layout_SpaceBeltNode"].id,
-    "spacePipe" : gameInfos.islands.allIslands["Layout_SpacePipeNode"].id,
-    "rail" : gameInfos.islands.allIslands["Layout_RailNode"].id,
-    "trainShapesLoader" : gameInfos.islands.allIslands["Layout_TrainLoader_Shapes"].id,
-    "trainShapesLoaderFlipped" : gameInfos.islands.allIslands["Layout_TrainLoader_Shapes_Flipped"].id,
-    "trainShapesUnloader" : gameInfos.islands.allIslands["Layout_TrainUnloader_Shapes"].id,
-    "trainShapesUnloaderFlipped" : gameInfos.islands.allIslands["Layout_TrainUnloader_Shapes_Flipped"].id,
-    "trainFluidsLoader" : gameInfos.islands.allIslands["Layout_TrainLoader_Fluids"].id,
-    "trainFluidsLoaderFlipped" : gameInfos.islands.allIslands["Layout_TrainLoader_Fluids_Flipped"].id,
-    "trainFluidsUnloader" : gameInfos.islands.allIslands["Layout_TrainUnloader_Fluids"].id,
-    "trainFluidsUnloaderFlipped" : gameInfos.islands.allIslands["Layout_TrainUnloader_Fluids_Flipped"].id,
-    "trainStop" : gameInfos.islands.allIslands["Layout_TrainStation"].id,
-    "trainProducerRed" : gameInfos.islands.allIslands["Layout_TrainProducer_Red"].id,
-    "trainProducerGreen" : gameInfos.islands.allIslands["Layout_TrainProducer_Green"].id,
-    "trainProducerBlue" : gameInfos.islands.allIslands["Layout_TrainProducer_Blue"].id,
-    "trainProducerWhite" : gameInfos.islands.allIslands["Layout_TrainProducer_White"].id
+    "spaceBelts" : [
+        gameInfos.islands.allIslands[f"SpaceBelt_{path}"].id
+        for path in ISLAND_PATH_TYPES
+    ],
+    "spacePipes" : [
+        gameInfos.islands.allIslands[f"SpacePipe_{path}"].id
+        for path in ISLAND_PATH_TYPES
+    ],
+    "rails" : [
+        gameInfos.islands.allIslands[f"Rail_{path}"].id
+        for path in ISLAND_PATH_TYPES
+    ],
+    "spaceBeltTunnelEntrance" : gameInfos.islands.allIslands["Layout_SpaceBeltTunnel_Entrance"].id,
+    "spacePipeTunnelEntrance" : gameInfos.islands.allIslands["Layout_SpacePipeTunnel_Entrance"].id,
 }
 
-ISLANDS_WITH_RAIL_EXTRA_DATA = [ISLAND_IDS[id] for id in (
-    "trainShapesLoader",
-    "trainShapesLoaderFlipped",
-    "trainShapesUnloader",
-    "trainShapesUnloaderFlipped",
-    "trainFluidsLoader",
-    "trainFluidsLoaderFlipped",
-    "trainFluidsUnloader",
-    "trainFluidsUnloaderFlipped",
-    "trainStop"
-)]
+NUM_CONNECTIONS_PER_RAIL = {
+    "Forward" : 1,
+    "LeftTurn" : 1,
+    "RightTurn" : 1,
+    "LeftFwdSplitter" : 2,
+    "RightFwdSplitter" : 2,
+    "YSplitter" : 2,
+    "TripleSplitter" : 3,
+    "RightFwdMerger" : 2,
+    "LeftFwdMerger" : 2,
+    "YMerger" : 2,
+    "TripleMerger" : 3
+}
+GLOBAL_WIRE_SENDER_BYTES = "AQQAAAABAQEBAAAAAAAAAIAAAAAAAAAAgAA="
+
+SPACE_BELT_ID_V1095 = "Layout_SpaceBeltNode"
+SPACE_PIPE_ID_V1095 = "Layout_SpacePipeNode"
+RAIL_ID_V1095 = "Layout_RailNode"
 
 class BlueprintError(Exception): ...
 
@@ -110,16 +132,15 @@ class BuildingEntry:
         _omitKeyIfDefault(toReturn,"Y",self.pos.y)
         _omitKeyIfDefault(toReturn,"L",self.pos.z)
         _omitKeyIfDefault(toReturn,"R",self.rotation.value)
-        _omitKeyIfDefault(toReturn,"C",_encodeEntryExtraData(self.extra,self.type.id,False))
+        _omitKeyIfDefault(toReturn,"C",_encodeEntryExtraData(self.extra,self.type.id))
         return toReturn
 
 class BuildingBlueprint:
 
-    def __init__(self,asEntryList:list[BuildingEntry],icons:list[BlueprintIcon],binaryVersion:int) -> None:
+    def __init__(self,asEntryList:list[BuildingEntry],icons:list[BlueprintIcon]) -> None:
         self.asEntryList = asEntryList
         self.asTileDict = _getTileDictFromEntryList(asEntryList)
         self.icons = icons
-        self.binaryVersion = binaryVersion
 
     def getSize(self) -> Size:
         return _genericGetSize(self)
@@ -143,7 +164,7 @@ class BuildingBlueprint:
                 "Data" : [i._encode() for i in self.icons]
             },
             "Entries" : [e._encode() for e in self.asEntryList],
-            "BinaryVersion" : self.binaryVersion
+            "BinaryVersion" : gameInfos.versions.LATEST_GAME_VERSION
         }
 
 class IslandEntry:
@@ -165,7 +186,7 @@ class IslandEntry:
         _omitKeyIfDefault(toReturn,"X",self.pos.x)
         _omitKeyIfDefault(toReturn,"Y",self.pos.y)
         _omitKeyIfDefault(toReturn,"R",self.rotation.value)
-        _omitKeyIfDefault(toReturn,"C",_encodeEntryExtraData(self.extra,self.type.id,True),("AA==",))
+        _omitKeyIfDefault(toReturn,"S",_encodeEntryExtraData(self.extra,self.type.id))
         if self.buildingBP is not None:
             toReturn["B"] = self.buildingBP._encode()
         return toReturn
@@ -232,7 +253,7 @@ class Blueprint:
             if tempBuildingList == []:
                 self.buildingBP = None
             else:
-                self.buildingBP = BuildingBlueprint(tempBuildingList,blueprint.icons,gameInfos.versions.LATEST_GAME_VERSION)
+                self.buildingBP = BuildingBlueprint(tempBuildingList,blueprint.icons)
 
     def getCost(self) -> int:
         # bp cost formula : last updated : alpha 15.2
@@ -295,11 +316,11 @@ def _genericGetValidIcons(bp:BuildingBlueprint|IslandBlueprint) -> list[Blueprin
     validIcons += [BlueprintIcon(None)] * (NUM_BP_ICONS-len(validIcons))
     return validIcons
 
-def _omitKeyIfDefault(dict:dict,key:str,value:int|str,defaults:tuple[typing.Any,...]=(0,"")) -> None:
+def _omitKeyIfDefault(dict:dict,key:str,value:int|str,defaults:tuple[typing.Any,...]=(None,0,"")) -> None:
     if value not in defaults:
         dict[key] = value
 
-def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
+def _decodeEntryExtraData(raw:str|None,entryType:str,isIsland:bool) -> typing.Any:
 
     def standardDecode(rawDecoded:bytes,emptyIsLengthNegative1:bool) -> str:
         try:
@@ -357,10 +378,13 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
 
         return {"type":"paint","value":color}
 
-    try:
-        rawDecoded = base64.b64decode(raw,validate=True)
-    except binascii.Error:
-        raise BlueprintError(f"Can't decode from base64")
+    if raw is None:
+        rawDecoded = b""
+    else:
+        try:
+            rawDecoded = base64.b64decode(raw,validate=True)
+        except binascii.Error:
+            raise BlueprintError("Can't decode from base64")
 
     if entryType == BUILDING_IDS["label"]:
         return standardDecode(rawDecoded,False)
@@ -417,39 +441,6 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
         except BlueprintError as e:
             raise BlueprintError(f"Error while decoding fluid generation string : {e}")
 
-    # same color encoding format is used in rails, keeping code for that in case it can be useful in the future
-
-    # if entryType in ("TrainStationLoaderInternalVariant","TrainStationUnloaderInternalVariant"):
-
-    #     defaultReturn = {"r":True,"g":True,"b":True,"w":True}
-
-    #     if rawDecoded == b"": # support for pre-alpha 15.2 blueprints
-    #         return defaultReturn
-
-    #     if len(rawDecoded) == 4:
-    #         encodedColor = int.from_bytes(rawDecoded,"little")
-
-    #     if (len(rawDecoded) != 4) or (encodedColor > 15): # support for pre-alpha 16 blueprints
-    #         try:
-    #             oldColorText = standardDecode(rawDecoded,True)
-    #         except BlueprintError as e:
-    #             raise BlueprintError(f"Error while attempting to decode old format train station : {e}")
-    #         if oldColorText == "":
-    #             return defaultReturn
-    #         return {
-    #             "r" : "r" in oldColorText,
-    #             "g" : "g" in oldColorText,
-    #             "b" : "b" in oldColorText,
-    #             "w" : "w" in oldColorText
-    #         }
-
-    #     return {
-    #         "w" : (encodedColor & 8) != 0,
-    #         "r" : (encodedColor & 4) != 0,
-    #         "g" : (encodedColor & 2) != 0,
-    #         "b" : (encodedColor & 1) != 0
-    #     }
-
     if entryType == BUILDING_IDS["button"]:
 
         if len(rawDecoded) < 1:
@@ -477,51 +468,71 @@ def _decodeEntryExtraData(raw:str,entryType:str,isIsland:bool) -> typing.Any:
         ][compareMode-1]
 
     if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
+
         isReceiver = entryType == BUILDING_IDS["wireGlobalReceiver"]
-        stringLen = 5 if isReceiver else 4
+
+        stringLen = 4 if isReceiver else 3
         if len(rawDecoded) < stringLen:
             raise BlueprintError(f"String must be at least {stringLen} bytes long")
-        channel = int.from_bytes(rawDecoded[:4],"little",signed=True)
-        if channel < 0:
-            raise BlueprintError("Wire transmitter channel can't be negative")
+
+        channel = int.from_bytes(rawDecoded[:3],"little")
+
+        if (channel < 0) or (channel > 7):
+            raise BlueprintError("Wire transmitter channel out of range")
+
         if isReceiver:
-            return rawDecoded[4] == 1, channel
+            return rawDecoded[3] == 2, channel
+
         return channel
 
+    # islands
+
     if (
-        (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"],ISLAND_IDS["rail"]))
-        or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA)
+        (entryType in ISLAND_IDS["spaceBelts"])
+        or (entryType in ISLAND_IDS["spacePipes"])
+        or (entryType in (ISLAND_IDS["spaceBeltTunnelEntrance"],ISLAND_IDS["spacePipeTunnelEntrance"]))
     ):
+        # idk the format
+        return raw
 
-        if len(rawDecoded) < 2:
-            raise BlueprintError("String must be at least 2 bytes long")
+    if entryType in ISLAND_IDS["rails"]:
 
-        layoutHeader = rawDecoded[0]
-        if (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"])) and (layoutHeader != 20):
-            raise BlueprintError("First byte of space belt/pipe layout isn't '\\x14'")
-        if ((entryType == ISLAND_IDS["rail"]) or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA)) and (layoutHeader != 10):
-            raise BlueprintError("First byte of rail layout isn't '\\x0a'")
+        numConnections = NUM_CONNECTIONS_PER_RAIL[entryType.removeprefix("Rail_")]
 
-        layoutType = rawDecoded[1]
-        if layoutType > 3:
-            raise BlueprintError(f"Unknown space belt/pipe/rail layout type : {layoutType}")
+        if len(rawDecoded) < 1:
+            raise BlueprintError("String must be at least 1 byte long")
 
-        return {"type":layoutType,"layout":rawDecoded[2:]}
+        numConnectionsInData = rawDecoded[0]
+        if numConnectionsInData < numConnections:
+            raise BlueprintError(f"Must have at least {numConnections} color information")
 
-    if isIsland and (rawDecoded != bytes([0])):
-        raise BlueprintError("String must be '\\x00'")
+        colorData = rawDecoded[1:]
+        if len(colorData) != 4*numConnectionsInData:
+            raise BlueprintError("Color data isn't the indicated length")
+
+        colorInts = [int.from_bytes(colorData[i*4:(i+1)*4],"little") for i in range(numConnectionsInData)]
+        return [
+            {
+                "w" : (c & 8) != 0,
+                "r" : (c & 4) != 0,
+                "g" : (c & 2) != 0,
+                "b" : (c & 1) != 0
+            }
+            for c in colorInts
+        ]
+
+    if isIsland and (raw is not None):
+        raise BlueprintError("Has to be null instead of string")
 
     return None
 
-def _encodeEntryExtraData(extra:typing.Any,entryType:str,isIsland:bool) -> str:
+def _encodeEntryExtraData(extra:typing.Any,entryType:str) -> str|None:
+
+    if extra is None:
+        return None
 
     def b64encode(string:bytes) -> str:
         return base64.b64encode(string).decode()
-
-    if extra is None:
-        if isIsland:
-            return b64encode(bytes([0]))
-        return ""
 
     def standardEncode(string:str,emptyIsLengthNegative1:bool) -> str:
         return b64encode(utils.encodeStringWithLen(string.encode(),emptyIsLengthNegative1=emptyIsLengthNegative1))
@@ -562,18 +573,6 @@ def _encodeEntryExtraData(extra:typing.Any,entryType:str,isIsland:bool) -> str:
     if entryType == BUILDING_IDS["fluidProducer"]:
         return b64encode(encodeFluidGen(extra))
 
-    # if entryType in ("TrainStationLoaderInternalVariant","TrainStationUnloaderInternalVariant"):
-    #     encodedColor = 0
-    #     if extra["w"]:
-    #         encodedColor += 8
-    #     if extra["r"]:
-    #         encodedColor += 4
-    #     if extra["g"]:
-    #         encodedColor += 2
-    #     if extra["b"]:
-    #         encodedColor += 1
-    #     return b64encode(encodedColor.to_bytes(4,"little"))
-
     if entryType == BUILDING_IDS["button"]:
         return b64encode(bytes([int(extra)]))
 
@@ -588,23 +587,45 @@ def _encodeEntryExtraData(extra:typing.Any,entryType:str,isIsland:bool) -> str:
         }[extra]]))
 
     if entryType in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
-        if entryType == BUILDING_IDS["wireGlobalReceiver"]:
-            extraExtra, channel = extra
-            extraExtra = bytes([1]) if extraExtra else bytes([2])
+
+        isReceiver = entryType == BUILDING_IDS["wireGlobalReceiver"]
+
+        if isReceiver:
+            isROS, channel = extra
         else:
             channel = extra
-            extraExtra = b""
-        return b64encode(channel.to_bytes(4,"little",signed=True)+extraExtra)
+
+        channel:int
+        channelEncoded = channel.to_bytes(3,"little")
+
+        if isReceiver:
+            return b64encode(channelEncoded+bytes([2 if isROS else 1]))
+
+        return b64encode(channelEncoded) + GLOBAL_WIRE_SENDER_BYTES
+
+    # islands
 
     if (
-        (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"],ISLAND_IDS["rail"]))
-        or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA)
+        (entryType in ISLAND_IDS["spaceBelts"])
+        or (entryType in ISLAND_IDS["spacePipes"])
+        or (entryType in (ISLAND_IDS["spaceBeltTunnelEntrance"],ISLAND_IDS["spacePipeTunnelEntrance"]))
     ):
-        return b64encode(
-            (b"\x14" if entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"]) else b"\x0a")
-            + bytes([extra["type"]])
-            + extra["layout"]
-        )
+        return extra
+
+    if entryType in ISLAND_IDS["rails"]:
+        colorInts:list[int] = []
+        for color in extra:
+            encodedColor = 0
+            if color["w"]:
+                encodedColor += 8
+            if color["r"]:
+                encodedColor += 4
+            if color["g"]:
+                encodedColor += 2
+            if color["b"]:
+                encodedColor += 1
+            colorInts.append(encodedColor)
+        return b64encode(bytes([len(colorInts)])+b"".join(c.to_bytes(4,"little") for c in colorInts))
 
     raise ValueError(f"Attempt to encode extra data of entry that shouldn't have any ({entryType})")
 
@@ -622,9 +643,6 @@ def _getDefaultEntryExtraData(entryType:str) -> typing.Any:
     if entryType == BUILDING_IDS["fluidProducer"]:
         return {"type":"paint","value":"r"}
 
-    # if entryType in ("TrainStationLoaderInternalVariant","TrainStationUnloaderInternalVariant"):
-    #     return {"r":True,"g":True,"b":True,"w":True}
-
     if entryType == BUILDING_IDS["button"]:
         return False
 
@@ -635,20 +653,23 @@ def _getDefaultEntryExtraData(entryType:str) -> typing.Any:
         return 0
 
     if entryType == BUILDING_IDS["wireGlobalReceiver"]:
-        return (False,0)
+        return (True,0)
+
+    # islands
 
     if (
-        (entryType in (ISLAND_IDS["spaceBelt"],ISLAND_IDS["spacePipe"],ISLAND_IDS["rail"]))
-        or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA)
+        (entryType in ISLAND_IDS["spaceBelts"])
+        or (entryType in ISLAND_IDS["spacePipes"])
+        or (entryType in (ISLAND_IDS["spaceBeltTunnelEntrance"],ISLAND_IDS["spacePipeTunnelEntrance"]))
     ):
-        return {
-            "type" : 1,
-            "layout" : bytes([0,0]) + (
-                bytes([15,0,0,0])
-                if (entryType == ISLAND_IDS["rail"]) or (entryType in ISLANDS_WITH_RAIL_EXTRA_DATA) else
-                bytes()
-            )
-        }
+        # the game seems to accept no extra data for all cases
+        return None
+
+    if entryType in ISLAND_IDS["rails"]:
+        return [
+            {"r":True,"g":True,"b":True,"w":True}
+            for _ in range(NUM_CONNECTIONS_PER_RAIL[entryType.removeprefix("Rail_")])
+        ]
 
     return None
 
@@ -687,7 +708,7 @@ _ERR_MSG_PATH_START = "'"
 _ERR_MSG_PATH_END = "' : "
 _defaultObj = object()
 
-def _getKeyValue(dict:dict,key:str,expectedValueType:type,default:typing.Any=_defaultObj) -> typing.Any:
+def _getKeyValue(dict:dict,key:str,expectedValueType:type[T1],default:T2=_defaultObj) -> T1|T2:
 
     value = dict.get(key,_defaultObj)
 
@@ -731,7 +752,7 @@ def _decodeBlueprintFirstPart(rawBlueprint:str) -> tuple[dict,int]:
         try:
             encodedBP = base64.b64decode(encodedBP,validate=True)
         except binascii.Error:
-            raise BlueprintError(f"Can't decode from base64")
+            raise BlueprintError("Can't decode from base64")
         try:
             encodedBP = gzip.decompress(encodedBP)
         except Exception as e:
@@ -760,7 +781,150 @@ def _encodeBlueprintLastPart(blueprint:dict,majorVersion:int) -> str:
     blueprint = PREFIX + SEPARATOR + str(majorVersion) + SEPARATOR + blueprint + SUFFIX
     return blueprint
 
-def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
+def _spaceBeltPipeRailV1095Migration(entry:dict,entryType:str) -> None:
+
+    errMsgBase = f"{_ERR_MSG_PATH_SEP}space belt/pipe/rail v1095 migration"
+
+    def fs(*args:T) -> frozenset[T]:
+        return frozenset(args)
+
+    conversionTable:dict[frozenset[tuple[int,int]],str] = {
+        fs((0,0)) : "Forward",
+        fs((0,3)) : "LeftTurn",
+        fs((0,1)) : "RightTurn",
+        fs((0,0),(0,3)) : "LeftFwdSplitter",
+        fs((0,0),(0,1)) : "RightFwdSplitter",
+        fs((0,3),(0,1)) : "YSplitter",
+        fs((0,0),(0,3),(0,1)) : "TripleSplitter",
+        fs((0,0),(1,0)) : "RightFwdMerger",
+        fs((0,0),(3,0)) : "LeftFwdMerger",
+        fs((1,0),(3,0)) : "YMerger",
+        fs((0,0),(1,0),(3,0)) : "TripleMerger"
+    }
+
+    railColorOrder = {
+        "Forward" : [(0,0)],
+        "LeftTurn" : [(0,3)],
+        "RightTurn" : [(0,1)],
+        "LeftFwdSplitter" : [(0,0),(0,3)],
+        "RightFwdSplitter" : [(0,0),(0,1)],
+        "YSplitter" : [(0,1),(0,3)],
+        "TripleSplitter" : [(0,0),(0,1),(0,3)],
+        # order for the mergers made up as not easily checkable ingame and doesn't matter in game-generated blueprints
+        "RightFwdMerger" : [(0,0),(1,0)],
+        "LeftFwdMerger" : [(0,0),(3,0)],
+        "YMerger" : [(3,0),(1,0)],
+        "TripleMerger" : [(0,0),(3,0),(1,0)]
+    }
+
+    isRail = entryType == RAIL_ID_V1095
+
+    try:
+        extraData = _getKeyValue(entry,"C",str)
+    except BlueprintError as e:
+        raise BlueprintError(f"{errMsgBase}{e}")
+
+    try:
+
+        try:
+            rawDecoded = base64.b64decode(extraData,validate=True)
+        except binascii.Error:
+            raise BlueprintError("Can't decode from base64")
+
+        if len(rawDecoded) < 2:
+            raise BlueprintError("String must be at least 2 bytes long")
+
+        layoutHeader = rawDecoded[0]
+        if (not isRail) and (layoutHeader != 20):
+            raise BlueprintError("First byte of space belt/pipe layout isn't '\\x14'")
+        if (isRail) and (layoutHeader != 10):
+            raise BlueprintError("First byte of rail layout isn't '\\x0a'")
+
+        layoutType = rawDecoded[1]
+        if (layoutType < 1) or (layoutType > 3):
+            raise BlueprintError(f"Invalid layout type : {layoutType}")
+
+        layoutData = rawDecoded[2:]
+        dataLen = (6*layoutType) if isRail else (2*layoutType)
+        if len(layoutData) != dataLen:
+            raise BlueprintError("Incorrect layout data length")
+
+        if isRail:
+            connections = [(layoutData[i*6],layoutData[(i*6)+1]) for i in range(layoutType)]
+            colorData = [layoutData[(i*6)+2:(i+1)*6] for i in range(layoutType)]
+        else:
+            connections = [(layoutData[i*2],layoutData[(i*2)+1]) for i in range(layoutType)]
+
+        newLayoutType = None
+        for newRotation in range(4):
+            connectionsRotated = [((i-newRotation)%4,(o-newRotation)%4) for i,o in connections]
+            connectionsFS = frozenset(connectionsRotated)
+            potentialLayout = conversionTable.get(connectionsFS)
+            if potentialLayout is not None:
+                newLayoutType = potentialLayout
+                break
+        if newLayoutType is None:
+            raise BlueprintError("Invalid layout data")
+
+        entry["T"] = (
+            ("Rail" if isRail else ("SpaceBelt" if entryType == SPACE_BELT_ID_V1095 else "SpacePipe"))
+            + "_"
+            + newLayoutType
+        )
+        entry["R"] = newRotation
+
+        if not isRail:
+            # entry["S"] intentionally not set
+            return
+
+        colorDataOrdered:list[bytes] = []
+        for connection in railColorOrder[newLayoutType]:
+            colorDataOrdered.append(colorData[connectionsRotated.index(connection)])
+
+        entry["S"] = base64.b64encode(bytes([layoutType])+b"".join(colorDataOrdered)).decode()
+
+    except BlueprintError as e:
+        raise BlueprintError(f"{errMsgBase}{_ERR_MSG_PATH_END}{e}")
+
+def _globalWireTransmitterV1095Migration(entry:dict,entryType:str) -> None:
+
+    errMsgBase = f"{_ERR_MSG_PATH_SEP}global wire transmitter v1095 migration"
+    isReceiver = entryType == BUILDING_IDS["wireGlobalReceiver"]
+
+    try:
+        extraData = _getKeyValue(entry,"C",str)
+    except BlueprintError as e:
+        raise BlueprintError(f"{errMsgBase}{e}")
+
+    try:
+
+        try:
+            rawDecoded = base64.b64decode(extraData,validate=True)
+        except binascii.Error:
+            raise BlueprintError("Can't decode from base64")
+
+        stringLen = 5 if isReceiver else 4
+        if len(rawDecoded) < stringLen:
+            raise BlueprintError(f"String must be at least {stringLen} bytes long")
+
+        channel = int.from_bytes(rawDecoded[:4],"little",signed=True)
+
+        if (channel < 0) or (channel > 7):
+            raise BlueprintError("Channel out of range")
+
+        encodedChannel = channel.to_bytes(3,"little")
+
+        if isReceiver:
+            isROS = rawDecoded[4] == 1
+            entry["C"] = base64.b64encode(encodedChannel+bytes([2 if isROS else 1])).decode()
+            return
+
+        entry["C"] = base64.b64encode(encodedChannel).decode() + GLOBAL_WIRE_SENDER_BYTES
+
+    except BlueprintError as e:
+        raise BlueprintError(f"{errMsgBase}{_ERR_MSG_PATH_END}{e}")
+
+def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False,mainBPVersion:int|None=None) -> dict:
 
     validBP = {}
 
@@ -769,7 +933,9 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
     if bpType not in (BUILDING_BP_TYPE,ISLAND_BP_TYPE):
         raise BlueprintError(f"{_ERR_MSG_PATH_SEP}$type{_ERR_MSG_PATH_END}Unknown blueprint type : '{bpType}'")
 
-    if mustBeBuildingBP and (bpType != BUILDING_BP_TYPE):
+    isBuildingBP = bpType == BUILDING_BP_TYPE
+
+    if mustBeBuildingBP and (not isBuildingBP):
         raise BlueprintError(f"{_ERR_MSG_PATH_SEP}$type{_ERR_MSG_PATH_END}Must be a building blueprint")
 
     validBP["$type"] = bpType
@@ -825,9 +991,14 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
     if bpEntries == []:
         raise BlueprintError(f"{_ERR_MSG_PATH_SEP}Entries{_ERR_MSG_PATH_END}Empty list")
 
+    if isBuildingBP:
+        versionForMigration = _getKeyValue(blueprint,"BinaryVersion",int,gameInfos.versions.LATEST_GAME_VERSION)
+    else:
+        versionForMigration = mainBPVersion
+
     allowedEntryTypes = (
         gameInfos.buildings.allBuildings.keys()
-        if bpType == BUILDING_BP_TYPE else
+        if isBuildingBP else
         gameInfos.islands.allIslands.keys()
     )
 
@@ -847,6 +1018,14 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
 
             t = _getKeyValue(entry,"T",str)
 
+            if versionForMigration < 1103 : # before 0.0.9
+                if t in (SPACE_BELT_ID_V1095,SPACE_PIPE_ID_V1095,RAIL_ID_V1095):
+                    _spaceBeltPipeRailV1095Migration(entry,t)
+                    t = entry["T"]
+                    r = entry["R"]
+                elif t in (BUILDING_IDS["wireGlobalSender"],BUILDING_IDS["wireGlobalReceiver"]):
+                    _globalWireTransmitterV1095Migration(entry,t)
+
             if t not in allowedEntryTypes:
                 raise BlueprintError(f"{_ERR_MSG_PATH_SEP}T{_ERR_MSG_PATH_END}Unknown entry type '{t}'")
 
@@ -858,14 +1037,15 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
                 "T" : t
             }
 
-            c = _getKeyValue(entry,"C",str,"AA==" if bpType == ISLAND_BP_TYPE else "")
+            extraDataKey = "C" if isBuildingBP else "S"
+            extra = _getKeyValue(entry,extraDataKey,str,None)
             try:
-                c = _decodeEntryExtraData(c,t,bpType == ISLAND_BP_TYPE)
+                extra = _decodeEntryExtraData(extra,t,not isBuildingBP)
             except BlueprintError as e:
-                raise BlueprintError(f"{_ERR_MSG_PATH_SEP}C{_ERR_MSG_PATH_END}{e}")
-            validEntry["C"] = c
+                raise BlueprintError(f"{_ERR_MSG_PATH_SEP}{extraDataKey}{_ERR_MSG_PATH_END}{e}")
+            validEntry[extraDataKey] = extra
 
-            if bpType == ISLAND_BP_TYPE:
+            if not isBuildingBP:
                 b = entry.get("B",_defaultObj)
                 if b is not _defaultObj:
                     b = _getKeyValue(entry,"B",dict)
@@ -882,12 +1062,9 @@ def _getValidBlueprint(blueprint:dict,mustBeBuildingBP:bool=False) -> dict:
 
     validBP["Entries"] = validBPEntries
 
-    if bpType == BUILDING_BP_TYPE:
-        validBP["BinaryVersion"] = _getKeyValue(blueprint,"BinaryVersion",int,gameInfos.versions.LATEST_GAME_VERSION)
-
     return validBP
 
-def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None],binaryVersion:int) -> BuildingBlueprint:
+def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None]) -> BuildingBlueprint:
 
     entryList:list[BuildingEntry] = []
     occupiedTiles:set[Pos] = set()
@@ -918,7 +1095,7 @@ def _decodeBuildingBP(buildings:list[dict[str,typing.Any]],icons:list[str|None],
             b["C"]
         ))
 
-    return BuildingBlueprint(entryList,[BlueprintIcon(i) for i in icons],binaryVersion)
+    return BuildingBlueprint(entryList,[BlueprintIcon(i) for i in icons])
 
 def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> IslandBlueprint:
 
@@ -943,7 +1120,7 @@ def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> 
             "pos" : Pos(island["X"],island["Y"]),
             "r" : island["R"],
             "t" : gameInfos.islands.allIslands[island["T"]],
-            "c" : island["C"]
+            "s" : island["S"]
         }
 
         if island.get("B") is None:
@@ -952,12 +1129,12 @@ def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> 
                 Rotation(islandEntryInfos["r"]),
                 islandEntryInfos["t"],
                 None,
-                islandEntryInfos["c"]
+                islandEntryInfos["s"]
             ))
             continue
 
         try:
-            curBuildingBP = _decodeBuildingBP(island["B"]["Entries"],island["B"]["Icon"]["Data"],island["B"]["BinaryVersion"])
+            curBuildingBP = _decodeBuildingBP(island["B"]["Entries"],island["B"]["Icon"]["Data"])
         except BlueprintError as e:
             raise BlueprintError(
                 f"Error while creating building blueprint representation of '{islandEntryInfos['t'].id}' at {islandEntryInfos['pos']} : {e}")
@@ -982,7 +1159,7 @@ def _decodeIslandBP(islands:list[dict[str,typing.Any]],icons:list[str|None]) -> 
             Rotation(islandEntryInfos["r"]),
             islandEntryInfos["t"],
             curBuildingBP,
-            islandEntryInfos["c"]
+            islandEntryInfos["s"]
         ))
 
     return IslandBlueprint(entryList,[BlueprintIcon(i) for i in icons])
@@ -1005,7 +1182,7 @@ def decodeBlueprint(rawBlueprint:str) -> Blueprint:
     version = decodedBP["V"]
 
     try:
-        validBP = _getValidBlueprint(decodedBP["BP"])
+        validBP = _getValidBlueprint(decodedBP["BP"],mainBPVersion=version)
     except BlueprintError as e:
         raise BlueprintError(f"Error in {_ERR_MSG_PATH_START}blueprint json object{_ERR_MSG_PATH_SEP}BP{e}")
 
@@ -1014,14 +1191,12 @@ def decodeBlueprint(rawBlueprint:str) -> Blueprint:
     if bpType == BUILDING_BP_TYPE:
         func = _decodeBuildingBP
         text = "building"
-        kwargs = {"binaryVersion":validBP["BinaryVersion"]}
     else:
         func = _decodeIslandBP
         text = "platform"
-        kwargs = {}
 
     try:
-        decodedDecodedBP = func(validBP["Entries"],validBP["Icon"]["Data"],**kwargs)
+        decodedDecodedBP = func(validBP["Entries"],validBP["Icon"]["Data"])
     except BlueprintError as e:
         raise BlueprintError(f"Error while creating {text} blueprint representation : {e}")
     return Blueprint(majorVersion,version,bpType,decodedDecodedBP)

@@ -1,5 +1,5 @@
 {
-    "GameVersion": 1095,
+    "GameVersion": 1105,
     "Buildings": [
         {
             "Id": "BeltDefaultVariant",
@@ -377,13 +377,36 @@
             ]
         },
         {
+            "Id": "HolePuncherDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "HolePuncherDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "Id": "HubDefaultVariant",
-            "Title": "Hub",
             "InternalVariants": [
                 {
                     "Id": "HubDefaultInternalVariant",
                     "Tiles": [
-                        {}
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
                     ]
                 }
             ]
@@ -733,6 +756,16 @@
             "InternalVariants": [
                 {
                     "Id": "LogicGateCompareInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                },
+                {
+                    "Id": "LogicGateCompareInternalVariantMirrored",
                     "Tiles": [
                         {
                             "X": 0,
@@ -1214,6 +1247,61 @@
             ]
         },
         {
+            "Id": "PourdownPainterDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "PourdownPainterDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 1,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
+                        },
+                        {
+                            "X": 0,
+                            "Y": 1,
+                            "Z": 1
+                        }
+                    ]
+                },
+                {
+                    "Id": "PourdownPainterDefaultInternalVariantMirrored",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": -1,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
+                        },
+                        {
+                            "X": 0,
+                            "Y": -1,
+                            "Z": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "Id": "PumpDefaultVariant",
             "InternalVariants": [
                 {
@@ -1223,6 +1311,46 @@
                             "X": 0,
                             "Y": 0,
                             "Z": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "PunchStackerDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "PunchStackerDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "QuarterPainterDefaultVariant",
+            "InternalVariants": [
+                {
+                    "Id": "QuarterPainterDefaultInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        },
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 1
                         }
                     ]
                 }
@@ -1333,6 +1461,31 @@
             "InternalVariants": [
                 {
                     "Id": "Splitter1To3InternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "Id": "SplitterOverflowVariant",
+            "InternalVariants": [
+                {
+                    "Id": "SplitterOverflowLInternalVariant",
+                    "Tiles": [
+                        {
+                            "X": 0,
+                            "Y": 0,
+                            "Z": 0
+                        }
+                    ]
+                },
+                {
+                    "Id": "SplitterOverflowLInternalVariantMirrored",
                     "Tiles": [
                         {
                             "X": 0,
