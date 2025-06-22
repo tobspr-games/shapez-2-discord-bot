@@ -353,16 +353,39 @@ def getCommandResponse(
 
     return kwargs
 
-class AntispamAlertButtons(discord.ui.View):
+async def interactionErrorHandler(interaction:discord.Interaction,error:Exception) -> None:
+    await globalLogError()
+    responseMsg = f"{globalInfos.UNKNOWN_ERROR_TEXT} ({error.__class__.__name__})"
+    if interaction.response.is_done():
+        await interaction.followup.send(responseMsg)
+    else:
+        await interaction.response.send_message(responseMsg,ephemeral=True)
+
+class WorkingButtons(discord.ui.View):
+
+    def __init__(self):
+        super().__init__()
+
+    async def on_error(self,interaction:discord.Interaction,error:Exception,item:discord.ui.Item):
+        await interactionErrorHandler(interaction,error)
+
+    def addButton(self,button:discord.ui.Button,callback:typing.Callable[[discord.Interaction],None]) -> None:
+        buttonCallbacks[button.custom_id] = callback
+        self.add_item(button)
+
+class AntispamAlertButtons(WorkingButtons):
 
     REASON_MSG = "Request by moderator from antispam alert"
 
     def __init__(self,user:discord.User|discord.Member):
         super().__init__()
         self.user = user
+        self.addButton(discord.ui.Button(label="Send info DM",style=discord.ButtonStyle.blurple),self.sendDMButton)
+        self.addButton(discord.ui.Button(label="Un-timeout",style=discord.ButtonStyle.green),self.unTimeoutButton)
+        self.addButton(discord.ui.Button(label="Kick",style=discord.ButtonStyle.red),self.kickButton)
+        self.addButton(discord.ui.Button(label="Ban",style=discord.ButtonStyle.red),self.banButton)
 
-    @discord.ui.button(label="Send info DM",style=discord.ButtonStyle.blurple)
-    async def sendDMButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+    async def sendDMButton(self,interaction:discord.Interaction) -> None:
         try:
             await self.user.send(globalInfos.ANTISPAM_DM_MSG)
             responseMsg = "Succesfully sent DM"
@@ -372,8 +395,7 @@ class AntispamAlertButtons(discord.ui.View):
         self.children[0].disabled = True
         await interaction.message.edit(view=self)
 
-    @discord.ui.button(label="Un-timeout",style=discord.ButtonStyle.green)
-    async def unTimeoutButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+    async def unTimeoutButton(self,interaction:discord.Interaction) -> None:
         try:
             await self.user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully un-timed out user"
@@ -383,8 +405,7 @@ class AntispamAlertButtons(discord.ui.View):
         self.children[1].disabled = True
         await interaction.message.edit(view=self)
 
-    @discord.ui.button(label="Kick",style=discord.ButtonStyle.red)
-    async def kickButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+    async def kickButton(self,interaction:discord.Interaction) -> None:
         try:
             await self.user.kick(reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully kicked user"
@@ -395,8 +416,7 @@ class AntispamAlertButtons(discord.ui.View):
             self.children[i].disabled = True
         await interaction.message.edit(view=self)
 
-    @discord.ui.button(label="Ban",style=discord.ButtonStyle.red)
-    async def banButton(self,interaction:discord.Interaction,button:discord.ui.Button) -> None:
+    async def banButton(self,interaction:discord.Interaction) -> None:
         try:
             await self.user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully banned user"
@@ -556,7 +576,7 @@ def getBPInfoText(blueprint:blueprints.Blueprint,advanced:bool) -> str:
         islandSize = blueprint.islandBP.getSize()
         responseParts.append([
             f"Platform count : `{utils.sepInGroupsNumber(blueprint.islandBP.getIslandCount())}`",
-            f"Platform size : `{islandSize.width}`x`{islandSize.height}`",
+            f"Platform size : `{islandSize.width}`x`{islandSize.height}`x`{islandSize.depth}`",
             f"Platform tiles : `{utils.sepInGroupsNumber(blueprint.islandBP.getTileCount())}`"
         ])
 
@@ -685,7 +705,9 @@ def runDiscordBot() -> None:
 
     global client, msgCommandMessages
 
-    client = discord.Client(intents=discord.Intents.all(),activity=discord.Game("shapez 2"))
+    intents = discord.Intents.all()
+    intents.presences = False
+    client = discord.Client(intents=intents,activity=discord.Game("shapez 2"))
     tree = discord.app_commands.CommandTree(client)
 
     with open(globalInfos.MSG_COMMAND_MESSAGES_PATH,encoding="utf-8") as f:
@@ -700,96 +722,97 @@ def runDiscordBot() -> None:
             executedOnReady = True
 
     @client.event
+    async def on_error(event:str,*args,**kwargs) -> None:
+        await globalLogError()
+
+    @client.event
     async def on_message(message:discord.Message) -> None:
-        try:
 
-            if message.author == client.user:
-                return
+        if message.author == client.user:
+            return
 
-            if (await antiSpam(message)) is True:
-                return
+        if (await antiSpam(message)) is True:
+            return
 
-            reactedToBPCodeInMsg = False
+        reactedToBPCodeInMsg = False
 
-            publicPerm = await hasPermission(PermissionLvls.PUBLIC_FEATURE,message=message)
-            if publicPerm:
+        publicPerm = await hasPermission(PermissionLvls.PUBLIC_FEATURE,message=message)
+        if publicPerm:
 
-                # shape viewer
-                hasErrors, responseMsg, file = await useShapeViewer(message.content,False,message.author.id)
-                if hasErrors:
-                    await message.add_reaction(globalInfos.INVALID_SHAPE_CODE_REACTION)
-                if (responseMsg != "") or (file is not None):
-                    await message.channel.send(**getCommandResponse(responseMsg,file,message.guild,True))
+            # shape viewer
+            hasErrors, responseMsg, file = await useShapeViewer(message.content,False,message.author.id)
+            if hasErrors:
+                await message.add_reaction(globalInfos.INVALID_SHAPE_CODE_REACTION)
+            if (responseMsg != "") or (file is not None):
+                await message.channel.send(**getCommandResponse(responseMsg,file,message.guild,True))
 
-                # automatic messages
-                autoMsgResult = await autoMessages.checkMessage(message)
-                if autoMsgResult != []:
-                    responseMsg = "\n".join(autoMsgResult)
-                    try:
-                        await message.reply(**getCommandResponse(responseMsg,None,message.guild,True),mention_author=False)
-                    except discord.HTTPException: # error raised when og message was deleted
-                        pass
+            # automatic messages
+            autoMsgResult = await autoMessages.checkMessage(message)
+            if autoMsgResult != []:
+                responseMsg = "\n".join(autoMsgResult)
+                try:
+                    await message.reply(**getCommandResponse(responseMsg,None,message.guild,True),mention_author=False)
+                except discord.HTTPException: # error raised when og message was deleted
+                    pass
 
-                # bp info message
-                async def bpInfoMessageLogic() -> None:
-                    nonlocal reactedToBPCodeInMsg
-                    if message.guild is None:
+            # bp info message
+            async def bpInfoMessageLogic() -> None:
+                nonlocal reactedToBPCodeInMsg
+                if message.guild is None:
+                    return
+                curBlueprintsChannels = (await guildSettings.getGuildSettings(message.guild.id))["blueprintsChannels"]
+                if type(message.channel) == discord.Thread:
+                    if message.channel.parent_id not in curBlueprintsChannels:
                         return
-                    curBlueprintsChannels = (await guildSettings.getGuildSettings(message.guild.id))["blueprintsChannels"]
-                    if type(message.channel) == discord.Thread:
-                        if message.channel.parent_id not in curBlueprintsChannels:
-                            return
-                    else:
-                        if message.channel.id not in curBlueprintsChannels:
-                            return
-                    potentialBP = await getSinglePotentialBPCodeInMessage(message)
-                    if potentialBP is None:
+                else:
+                    if message.channel.id not in curBlueprintsChannels:
                         return
-                    try:
-                        decodedBP = blueprints.decodeBlueprint(potentialBP)
-                    except blueprints.BlueprintError:
-                        return
-                    responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
-                    try:
-                        await message.reply(safenString(responseMsg),files=files,mention_author=False)
-                    except discord.HTTPException:
-                        return
-                    reactedToBPCodeInMsg = True
-                await bpInfoMessageLogic()
+                potentialBP = await getSinglePotentialBPCodeInMessage(message)
+                if potentialBP is None:
+                    return
+                try:
+                    decodedBP = blueprints.decodeBlueprint(potentialBP)
+                except blueprints.BlueprintError:
+                    return
+                responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
+                try:
+                    await message.reply(safenString(responseMsg),files=files,mention_author=False)
+                except discord.HTTPException:
+                    return
+                reactedToBPCodeInMsg = True
+            await bpInfoMessageLogic()
 
-            if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
+        if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 
-                # equivalent of a /ping
-                if client.user.mention in message.content:
-                    try:
-                        await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
-                    except discord.HTTPException:
-                        pass
+            # equivalent of a /ping
+            if client.user.mention in message.content:
+                try:
+                    await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
+                except discord.HTTPException:
+                    pass
 
-                # blueprint version reaction
-                if not reactedToBPCodeInMsg:
-                    msgContent = await concatMsgContentAndAttachments(message.content,message.attachments)
-                    bpReactions = detectBPVersion(blueprints.getPotentialBPCodesInString(msgContent))
-                    if bpReactions is not None:
-                        for reaction in bpReactions:
-                            if type(reaction) == int:
-                                reaction = client.get_emoji(reaction)
-                            try:
-                                await message.add_reaction(reaction)
-                            except discord.HTTPException:
-                                pass
+            # blueprint version reaction
+            if not reactedToBPCodeInMsg:
+                msgContent = await concatMsgContentAndAttachments(message.content,message.attachments)
+                bpReactions = detectBPVersion(blueprints.getPotentialBPCodesInString(msgContent))
+                if bpReactions is not None:
+                    for reaction in bpReactions:
+                        if type(reaction) == int:
+                            reaction = client.get_emoji(reaction)
+                        try:
+                            await message.add_reaction(reaction)
+                        except discord.HTTPException:
+                            pass
 
-        except Exception:
-            await globalLogError()
+    @client.event
+    async def on_interaction(interaction:discord.Interaction) -> None:
+        if interaction.type != discord.InteractionType.component:
+            return
+        await buttonCallbacks[interaction.data["custom_id"]](interaction)
 
     @tree.error
     async def on_error(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
-        await globalLogError()
-        responseMsg = f"{globalInfos.UNKNOWN_ERROR_TEXT} ({error.__cause__.__class__.__name__})"
-        if interaction.response.is_done():
-            await interaction.followup.send(responseMsg)
-        else:
-            await interaction.response.send_message(responseMsg,ephemeral=True)
+        await interactionErrorHandler(interaction,error.__cause__)
 
     # owner only commands
 
@@ -1004,19 +1027,15 @@ def runDiscordBot() -> None:
             file = None
         await interaction.followup.send(**getCommandResponse(responseMsg,file,interaction.guild,False))
 
-    @tree.command(name="change-blueprint-version",description="Change a blueprint's version")
+    @tree.command(name="update-blueprint",description="Update a blueprint to the latest version")
     @discord.app_commands.describe(
         blueprint=globalInfos.SLASH_CMD_BP_PARAM_DESC,
-        version=f"The blueprint version number (latest : {gameInfos.versions.LATEST_GAME_VERSION})",
-        blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC,
-        advanced="Whether or not to fully decode and encode the blueprint"
+        blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC
     )
-    async def changeBlueprintVersionCommand(
+    async def updateBlueprintCommand(
         interaction:discord.Interaction,
         blueprint:str,
-        version:int,
-        blueprint_file:discord.Attachment|None=None,
-        advanced:bool=False
+        blueprint_file:discord.Attachment|None=None
     ) -> None:
         if exitCommandWithoutResponse(interaction):
             return
@@ -1035,12 +1054,7 @@ def runDiscordBot() -> None:
                 return
 
             try:
-                if advanced:
-                    decodedBP = blueprints.decodeBlueprint(toProcessBlueprint)
-                    decodedBP.version = version
-                    responseMsg = blueprints.encodeBlueprint(decodedBP)
-                else:
-                    responseMsg = blueprints.changeBlueprintVersion(toProcessBlueprint,version)
+                responseMsg = blueprints.encodeBlueprint(blueprints.decodeBlueprint(toProcessBlueprint,True))
                 noErrors = True
             except blueprints.BlueprintError as e:
                 responseMsg = f"Error happened : {e}"
@@ -1460,3 +1474,4 @@ antiSpamLastMessages:dict[tuple[int,int],dict[str,str|list[discord.Message]|int|
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
 msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}
 shapeViewerLastErrors:dict[int,dict[str,int|datetime.datetime]] = {}
+buttonCallbacks:dict[str,typing.Callable[[discord.Interaction],None]] = {}

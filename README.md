@@ -79,7 +79,7 @@ If you have the blueprint code as text, paste it in the 'blueprint' parameter. I
 
 - /view-shapes [message] : Will trigger the shape viewer like a regular message but will send the response back only to you and will also include any error messages
 
-- /change-blueprint-version [blueprint] [version] [blueprint_file=None] [advanced=False] : Changes a blueprint's version and returns the new code. If 'advanced' is set to true, the blueprint will be fully decoded before changing the version (for exemple useful when loading a blueprint from an old version that produces an error ingame because it contains something with an old format)
+- /update-blueprint [blueprint] [blueprint_file=None] : Updates a blueprint to the latest format. Runs the same migration code as ingame as well as some additional convertions.
 
 - /member-count : Displays the member count of the server it is executed in (with additional info such as online/offline count and percentage)
 

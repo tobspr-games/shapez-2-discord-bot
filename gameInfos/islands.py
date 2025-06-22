@@ -15,7 +15,7 @@ class IslandTile:
         self.buildArea = buildArea
 
 class Island:
-    def __init__(self,id:str,title:str,tiles:list[IslandTile],islandUnitCost:int) -> None:
+    def __init__(self,id:str,title:str,tiles:list[IslandTile],islandUnitCost:int|float) -> None:
         self.id = id
         self.title = title
         self.tiles = tiles
@@ -44,10 +44,10 @@ def _loadIslands() -> dict[str,Island]:
     for islandRaw in islandsRaw["Islands"]:
 
         curRemovedNotches:list[tuple[Pos,Rotation]] = [
-            ((rn:=gameInfos.common.loadDirection(rnr))["pos"],rn["rot"]) for rnr in islandRaw["RemovedNotches"]
+            ((rn:=gameInfos.common.loadDirection(rnr))["pos"],rn["rot"]) for rnr in islandRaw.get("RemovedNotches",[])
         ]
         curReducedSides:list[tuple[Pos,Rotation]] = [
-            ((rs:=gameInfos.common.loadDirection(rsr))["pos"],rs["rot"]) for rsr in islandRaw["ReducedSides"]
+            ((rs:=gameInfos.common.loadDirection(rsr))["pos"],rs["rot"]) for rsr in islandRaw.get("ReducedSides",[])
         ]
         curBuildAreaOverrides:dict[Pos,list[Rect]] = {}
         for baor in islandRaw.get("BuildAreaOverride",[]):
@@ -64,6 +64,10 @@ def _loadIslands() -> dict[str,Island]:
         generatedIslandTiles = []
 
         for tile in curTiles:
+
+            if islandRaw.get("NoBuildArea",False):
+                generatedIslandTiles.append(IslandTile(tile,[]))
+                continue
 
             if curBuildAreaOverrides.get(tile) is not None:
                 generatedIslandTiles.append(IslandTile(tile,curBuildAreaOverrides[tile]))

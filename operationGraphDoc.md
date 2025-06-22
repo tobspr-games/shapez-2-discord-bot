@@ -63,6 +63,10 @@ Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:swap:4,21`, `6,r:paint:11`
   - 2 inputs : shape, color
   - 1 output
   - Replaces empty quadrants and pins with crystals of the given color
+- split :
+  - 1 input
+  - 2 outputs
+  - Duplicates the input shape into two copies of it, to be used multiple times in following operations
 
 ## Additional parameters
 

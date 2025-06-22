@@ -171,7 +171,7 @@ class font_Font:
 
         kwargs = {}
         if background is not None:
-            kwargs["color"] = color
+            kwargs["color"] = background
 
         image = PIL.Image.new("RGBA",(bbox[2]+1,bbox[3]+1),**kwargs)
         PIL.ImageDraw.Draw(image).text((0,0),text,color,self._font)

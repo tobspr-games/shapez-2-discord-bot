@@ -1,3 +1,36 @@
+## 22 Jun 25
+- Update for 0.1.0 :
+  - Add versions in game infos
+    - Refactor versions module to support more combinations of version suffixes
+  - Update islands
+    - Add support for 3D islands
+    - Add support for float platform units costs
+    - Add foundations ID migration in blueprints
+  - Update buildings, icons, translations
+  - Update global wire transmitters additional data
+    - Add support for entries with ingame additional data but no internal additional data
+  - Add migration for global wire receivers
+  - Remove space belt/pipe additional data
+  - Add train unloaders and transfers additional data
+  - Update train colors additional data
+  - Update default colors for rail splitters additional data
+  - Allow additional data for islands that shouldn't have any
+  - Remove the 3 layers limit on building blueprints
+- Rename all instances of 'quad' to 'part' in shape viewer
+- Add 'split' operation to /operation-graph
+- Disable presences intents
+- Change /change-blueprint-version to /update-blueprint
+  - Add 'migrate' option to blueprint decoding, when activated :
+    - Unknown entry types are discarded
+    - Global wire transmitters from 0.1.0-pre1 and before are updated
+- Add 'no build area' option in islands
+- Make 'reduced sides' and 'removed notches' keys optional in islands
+- Add 'split' operation to /operation-graph
+- Use new method for handling message buttons callbacks
+- Use latest version and latest major version constants when encoding blueprints
+- Fix incorrect background color in pygamePIL text rendering
+- Fix mirrored comparison gate not supporting additional data in blueprints
+
 ## 08 Apr 25
 - Update for 0.0.9 :
   - Add versions in game infos

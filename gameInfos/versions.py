@@ -133,83 +133,105 @@ GAME_VERSIONS = {
         "0.0.9-rc5",
         "0.0.9-rc6",
         "0.0.9-rc7"
+    ],
+    1118 : [
+        "0.1.0-pre1-rc3"
+    ],
+    1119 : [
+        "0.1.0-pre2-rc1",
+        "0.1.0-pre2-rc2"
+    ],
+    1121 : [
+        "0.1.0-pre3-rc1",
+        "0.1.0-pre4-rc1"
+    ],
+    1122 : [
+        "0.1.0-pre5-rc1",
+        "0.1.0-pre6-rc1",
+        "0.1.0-pre7-rc1",
+        "0.1.0-pre8-rc1"
     ]
 }
 LATEST_GAME_VERSION = list(GAME_VERSIONS.keys())[-1]
-LATEST_MAJOR_VERSION = 2
+LATEST_MAJOR_VERSION = 3
 
 BP_VERSION_REACTION_A = "\U0001f1e6"
 BP_VERSION_REACTION_C = "\U0001f1e8"
 BP_VERSION_REACTION_D = "\U0001f1e9"
+BP_VERSION_REACTION_P = "\U0001f1f5"
 BP_VERSION_REACTION_R = "\U0001f1f7"
 BP_VERSION_REACTION_DOT_1 = "\u23fa"
 BP_VERSION_REACTION_DOT_2 = 1261037521496965202
 BP_VERSION_REACTION_DOT_3 = 1333165681281339503
-BP_VERSION_REACTION_DIGITS_1 = {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)}
-BP_VERSION_REACTION_DIGITS_2 = {str(i) : v for i,v in enumerate([
-    1159909769876877352,1159909772133400707,1159909773643358228,
-    1159909775526592512,1159909784305283133,1159909786956087326,
-    1159909788130476124,1159909789741105282,1159909792106676405,
-    1159909793578877028
-])}
-BP_VERSION_REACTION_DIGITS_3 = {str(i) : v for i,v in enumerate([
-    1159909533074866286,1159909535872471162,1159909537944457226,
-    1159909542193270824,1159909546735702108,1159909549323587757,
-    1159909551697576056,1159909554532913203,1159909556336468008,
-    1159909559066964110
-])}
-BP_VERSION_REACTION_DIGITS_4 = {str(i) : v for i,v in enumerate([
-    1333173576563687516,1333173578148876319,1333173580166463569,
-    1333173581474959372,1333173589674954832,1333173591365255329,
-    1333173593269469244,1333173594930413579,1333173596901867530,
-    1333173598407626752
-])}
-BP_VERSION_REACTION_DIGITS_5 = {str(i) : v for i,v in enumerate([
-    1333173698345177138,1333173700429746297,1333173701830643847,
-    1333173704078921842,1333173705756512297,1333173708008849540,
-    1333173709531250708,1333173712148627516,1333173713822286006,
-    1333173715554275430
-])}
-BP_VERSION_REACTION_DIGITS_6 = {str(i) : v for i,v in enumerate([
-    1333173795329933424,1333173796936482897,1333173798458888262,
-    1333173800145129523,1333173801659400326,1333173803358093393,
-    1333173805409107968,1333173807095218248,1333173808609361940,
-    1333173811171954800
-])}
+BP_VERSION_REACTION_DIGITS:list[dict[str,str|int]] = [
+    {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)},
+    {str(i) : v for i,v in enumerate([
+        1159909769876877352,1159909772133400707,1159909773643358228,
+        1159909775526592512,1159909784305283133,1159909786956087326,
+        1159909788130476124,1159909789741105282,1159909792106676405,
+        1159909793578877028
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1159909533074866286,1159909535872471162,1159909537944457226,
+        1159909542193270824,1159909546735702108,1159909549323587757,
+        1159909551697576056,1159909554532913203,1159909556336468008,
+        1159909559066964110
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173576563687516,1333173578148876319,1333173580166463569,
+        1333173581474959372,1333173589674954832,1333173591365255329,
+        1333173593269469244,1333173594930413579,1333173596901867530,
+        1333173598407626752
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173698345177138,1333173700429746297,1333173701830643847,
+        1333173704078921842,1333173705756512297,1333173708008849540,
+        1333173709531250708,1333173712148627516,1333173713822286006,
+        1333173715554275430
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173795329933424,1333173796936482897,1333173798458888262,
+        1333173800145129523,1333173801659400326,1333173803358093393,
+        1333173805409107968,1333173807095218248,1333173808609361940,
+        1333173811171954800
+    ])}
+]
 
-def _getDecomposedVersionId(versionId:str) -> dict[str,list[str]|dict|bool]:
+def _getDecomposedVersionId(versionId:str) -> dict[str,list[str]|list[dict]]:
 
-    output = {}
+    mainNumber, *suffixes = versionId.split("-")
 
-    mainSplits = versionId.split("-")
+    output:dict[str,list[str]|list[dict]] = {
+        "main" : mainNumber.split("."),
+        "suffixes" : []
+    }
 
-    mainNumber = mainSplits.pop(0)
-    output["main"] = mainNumber.split(".")
+    for suffix in suffixes:
 
-    if len(mainSplits) > 0:
-
-        suffix = mainSplits[0]
-        if suffix.startswith(("alpha","rc")):
-            mainSplits.pop(0)
-
-            if suffix.startswith("alpha"):
-                suffixType = "alpha"
-                suffixNum = suffix.removeprefix("alpha")
-            else:
-                suffixType = "rc"
-                suffixNum = suffix.removeprefix("rc")
-            suffixNumSplit = suffixNum.split(".")
+        if suffix.startswith("alpha"):
+            suffixNumSplit = suffix.removeprefix("alpha").split(".")
             suffixNumOutput = [[c for c in suffixNumSplit[0]]]
             if len(suffixNumSplit) > 1:
                 suffixNumOutput.append(suffixNumSplit[1])
-
-            output["suffix"] = {
-                "type" : suffixType,
+            output["suffixes"].append({
+                "type" : "alpha",
                 "num" : suffixNumOutput
-            }
+            })
 
-    if len(mainSplits) > 0:
-        output["demo"] = True
+        elif suffix.startswith("rc"):
+            output["suffixes"].append({
+                "type" : "rc",
+                "num" : suffix.removeprefix("rc")
+            })
+
+        elif suffix.startswith("pre"):
+            output["suffixes"].append({
+                "type" : "preview",
+                "num" : suffix.removeprefix("pre")
+            })
+
+        elif suffix == "demo":
+            output["suffixes"].append({"type":"demo"})
 
     return output
 
@@ -231,17 +253,24 @@ def versionNumToText(version:int,returnAll:bool=False) -> None|str|list[str]:
 
         output += ".".join(decomposed["main"])
 
-        if decomposed.get("suffix") is not None:
-            if decomposed["suffix"]["type"] == "alpha":
-                output += " Alpha "
-            else:
-                output += " RC "
-            output += "".join(decomposed["suffix"]["num"][0])
-            if len(decomposed["suffix"]["num"]) > 1:
-                output += "." + decomposed["suffix"]["num"][1]
+        for suffix in decomposed["suffixes"]:
 
-        if decomposed.get("demo"):
-            output += " Demo"
+            if suffix["type"] == "alpha":
+                output += " Alpha "
+                output += "".join(suffix["num"][0])
+                if len(suffix["num"]) > 1:
+                    output += "." + suffix["num"][1]
+
+            elif suffix["type"] == "rc":
+                output += " RC "
+                output += suffix["num"]
+
+            elif suffix["type"] == "preview":
+                output += " Preview "
+                output += suffix["num"]
+
+            elif suffix["type"] == "demo":
+                output += " Demo"
 
         outputs.append(output)
 
@@ -262,26 +291,38 @@ def versionNumToReactions(version:int) -> None|list[str|int]:
     decomposed = _getDecomposedVersionId(versionText)
 
     output = [
-        BP_VERSION_REACTION_DIGITS_1[decomposed["main"][0]],
+        BP_VERSION_REACTION_DIGITS[0][decomposed["main"][0]],
         BP_VERSION_REACTION_DOT_1,
-        BP_VERSION_REACTION_DIGITS_2[decomposed["main"][1]],
+        BP_VERSION_REACTION_DIGITS[1][decomposed["main"][1]],
         BP_VERSION_REACTION_DOT_2,
-        BP_VERSION_REACTION_DIGITS_3[decomposed["main"][2]]
+        BP_VERSION_REACTION_DIGITS[2][decomposed["main"][2]]
     ]
 
-    if decomposed.get("suffix") is not None:
-        if decomposed["suffix"]["type"] == "alpha":
-            output.append(BP_VERSION_REACTION_A)
-        else:
-            output.extend([BP_VERSION_REACTION_R,BP_VERSION_REACTION_C])
-        if len(decomposed["suffix"]["num"][0]) > 1:
-            output.append(BP_VERSION_REACTION_DIGITS_4[decomposed["suffix"]["num"][0][0]])
-        output.append(BP_VERSION_REACTION_DIGITS_5[decomposed["suffix"]["num"][0][-1]])
-        if len(decomposed["suffix"]["num"]) > 1:
-            output.append(BP_VERSION_REACTION_DOT_3)
-            output.append(BP_VERSION_REACTION_DIGITS_6[decomposed["suffix"]["num"][1]])
+    digitsIndex = 3
 
-    if decomposed.get("demo"):
-        output.append(BP_VERSION_REACTION_D)
+    for suffix in decomposed["suffixes"]:
+
+        if suffix["type"] == "alpha":
+            output.append(BP_VERSION_REACTION_A)
+            for num in suffix["num"][0]:
+                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][num])
+                digitsIndex += 1
+            if len(suffix["num"]) > 1:
+                output.append(BP_VERSION_REACTION_DOT_3)
+                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"][1]])
+                digitsIndex += 1
+
+        elif suffix["type"] == "rc":
+            output.extend([BP_VERSION_REACTION_R,BP_VERSION_REACTION_C])
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            digitsIndex += 1
+
+        elif suffix["type"] == "preview":
+            output.append(BP_VERSION_REACTION_P)
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            digitsIndex += 1
+
+        elif suffix["type"] == "demo":
+            output.append(BP_VERSION_REACTION_D)
 
     return output

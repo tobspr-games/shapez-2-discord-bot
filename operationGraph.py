@@ -107,7 +107,8 @@ OPERATIONS:dict[str,Operation] = {
     "stack" : Operation(2,1,"Stack",shapeOperations.stack),
     "paint" : Operation(2,1,"Top paint",shapeOperations.topPaint,[1]),
     "pin" : Operation(1,1,"Push pin",shapeOperations.pushPin),
-    "crystal" : Operation(2,1,"Generate crystals",shapeOperations.genCrystal,[1])
+    "crystal" : Operation(2,1,"Generate crystals",shapeOperations.genCrystal,[1]),
+    "split" : Operation(1,2,"Split",lambda shape,config: [shape,shape])
 }
 
 for k,v in OPERATIONS.items():

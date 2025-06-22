@@ -111,7 +111,7 @@ def decodedFormatToPygameSurf(decoded:list[dict[str,str|dict[str,bool|str]]],fon
         curX += text.get_width()
     return surf
 
-def sepInGroupsNumber(num:int) -> str:
+def sepInGroupsNumber(num:int|float) -> str:
     return f"{num:,}"
 
 def decodeStringWithLen(string:bytes,numBytesForLen:int=2,emptyIsLengthNegative1:bool=True) -> bytes:
