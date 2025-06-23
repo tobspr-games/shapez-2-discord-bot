@@ -1,3 +1,9 @@
+## 23 Jun 25
+- Update for 0.1.1 :
+  - Add version in game infos
+- Use again another method to handle message button callbacks
+- No longer send a 3D viewer link if it's in a file in blueprint info message, instead now include a button with the same functionality as the access-blueprint context menu command
+
 ## 22 Jun 25
 - Update for 0.1.0 :
   - Add versions in game infos

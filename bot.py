@@ -361,71 +361,88 @@ async def interactionErrorHandler(interaction:discord.Interaction,error:Exceptio
     else:
         await interaction.response.send_message(responseMsg,ephemeral=True)
 
-class WorkingButtons(discord.ui.View):
-
-    def __init__(self):
-        super().__init__()
-
-    async def on_error(self,interaction:discord.Interaction,error:Exception,item:discord.ui.Item):
-        await interactionErrorHandler(interaction,error)
-
-    def addButton(self,button:discord.ui.Button,callback:typing.Callable[[discord.Interaction],None]) -> None:
-        buttonCallbacks[button.custom_id] = callback
-        self.add_item(button)
-
-class AntispamAlertButtons(WorkingButtons):
+class AntispamAlertButtons(discord.ui.View):
 
     REASON_MSG = "Request by moderator from antispam alert"
 
-    def __init__(self,user:discord.User|discord.Member):
+    def __init__(self,user:discord.User|discord.Member,buttonStates:str="1111"):
         super().__init__()
-        self.user = user
-        self.addButton(discord.ui.Button(label="Send info DM",style=discord.ButtonStyle.blurple),self.sendDMButton)
-        self.addButton(discord.ui.Button(label="Un-timeout",style=discord.ButtonStyle.green),self.unTimeoutButton)
-        self.addButton(discord.ui.Button(label="Kick",style=discord.ButtonStyle.red),self.kickButton)
-        self.addButton(discord.ui.Button(label="Ban",style=discord.ButtonStyle.red),self.banButton)
+        self.add_item(discord.ui.Button(
+            label = "Send info DM",
+            style = discord.ButtonStyle.blurple,
+            custom_id = f"antispam-sendDM-{user.id}-{buttonStates}",
+            disabled = buttonStates[0] == "0"
+        ))
+        self.add_item(discord.ui.Button(
+            label = "Un-timeout",
+            style = discord.ButtonStyle.green,
+            custom_id = f"antispam-untimeout-{user.id}-{buttonStates}",
+            disabled = buttonStates[1] == "0"
+        ))
+        self.add_item(discord.ui.Button(
+            label = "Kick",
+            style = discord.ButtonStyle.red,
+            custom_id = f"antispam-kick-{user.id}-{buttonStates}",
+            disabled = buttonStates[2] == "0"
+        ))
+        self.add_item(discord.ui.Button(
+            label = "Ban",
+            style = discord.ButtonStyle.red,
+            custom_id = f"antispam-ban-{user.id}-{buttonStates}",
+            disabled = buttonStates[3] == "0"
+        ))
 
-    async def sendDMButton(self,interaction:discord.Interaction) -> None:
+async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawAction:str) -> None:
+
+    action, userId, buttonStates = rawAction.split("-")
+
+    try:
+        user = await interaction.guild.fetch_member(userId)
+    except (discord.Forbidden,discord.NotFound):
+        responseMsg = "Couldn't find user"
+        user = None
+
+    if user is None:
+        disableIndexes = []
+
+    elif action == "sendDM":
         try:
-            await self.user.send(globalInfos.ANTISPAM_DM_MSG)
+            await user.send(globalInfos.ANTISPAM_DM_MSG)
             responseMsg = "Succesfully sent DM"
         except discord.Forbidden:
             responseMsg = "Failed to send DM"
-        await interaction.response.send_message(responseMsg,ephemeral=True)
-        self.children[0].disabled = True
-        await interaction.message.edit(view=self)
+        disableIndexes = [0]
 
-    async def unTimeoutButton(self,interaction:discord.Interaction) -> None:
+    elif action == "untimeout":
         try:
-            await self.user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
+            await user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully un-timed out user"
-        except (AttributeError,discord.Forbidden,discord.NotFound):
+        except (discord.Forbidden,discord.NotFound):
             responseMsg = "Failed to un-timeout user"
-        await interaction.response.send_message(responseMsg,ephemeral=True)
-        self.children[1].disabled = True
-        await interaction.message.edit(view=self)
+        disableIndexes = [1]
 
-    async def kickButton(self,interaction:discord.Interaction) -> None:
+    elif action == "kick":
         try:
-            await self.user.kick(reason=AntispamAlertButtons.REASON_MSG)
+            await user.kick(reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully kicked user"
-        except (AttributeError,discord.Forbidden,discord.NotFound):
+        except (discord.Forbidden,discord.NotFound):
             responseMsg = "Failed to kick user"
-        await interaction.response.send_message(responseMsg,ephemeral=True)
-        for i in range(4):
-            self.children[i].disabled = True
-        await interaction.message.edit(view=self)
+        disableIndexes = list(range(4))
 
-    async def banButton(self,interaction:discord.Interaction) -> None:
+    elif action == "ban":
         try:
-            await self.user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
+            await user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
             responseMsg = "Succesfully banned user"
-        except (AttributeError,discord.Forbidden,discord.NotFound):
+        except (discord.Forbidden,discord.NotFound):
             responseMsg = "Failed to ban user"
-        await interaction.response.send_message(responseMsg,ephemeral=True)
-        for i in range(4):
-            self.children[i].disabled = True
-        await interaction.message.edit(view=self)
+        disableIndexes = list(range(4))
+
+    else:
+        raise ValueError(f"Unknown antispam action : {action}")
+
+    await interaction.response.send_message(responseMsg,ephemeral=True)
+    buttonStates = "".join("0" if i in disableIndexes else state for i,state in enumerate(buttonStates))
+    await interaction.message.edit(view=AntispamAlertButtons(user,buttonStates))
 
 # port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
 async def antiSpam(message:discord.Message) -> bool|None:
@@ -606,7 +623,7 @@ def getAccessBPTextAndFiles(
     blueprint:blueprints.Blueprint,
     blueprintCode:str,
     guild:discord.Guild|None,
-    formatConversionFiles:bool
+    includeBigFiles:bool
 ) -> tuple[str,list[discord.File]]:
 
     infoText = getBPInfoText(blueprint,False)
@@ -625,7 +642,8 @@ def getAccessBPTextAndFiles(
     if len(responseMsg) > globalInfos.MESSAGE_MAX_LENGTH:
         if len(infoTextFormatted) <= globalInfos.MESSAGE_MAX_LENGTH:
             responseMsg = infoTextFormatted
-            toCreateFiles.append((bpCode3dViewLink,"3D viewer link.txt"))
+            if includeBigFiles:
+                toCreateFiles.append((bpCode3dViewLink,"3D viewer link.txt"))
         elif len(bpCode3dViewLinkFormatted) <= globalInfos.MESSAGE_MAX_LENGTH:
             responseMsg = bpCode3dViewLinkFormatted
             toCreateFiles.append((infoText,"blueprint infos.txt"))
@@ -638,7 +656,7 @@ def getAccessBPTextAndFiles(
                 bpCode3dViewLink
             ]),"blueprint infos.txt"))
 
-    if formatConversionFiles:
+    if includeBigFiles:
         toCreateFiles.append((blueprintCode,"blueprint.txt"))
         toCreateFiles.append((blueprintCode,"blueprint.spz2bp"))
 
@@ -689,7 +707,7 @@ async def accessBlueprintCommandInnerPart(
 
     responseMsg:str; files:list[discord.File]
     await inner()
-    await interaction.followup.send(responseMsg,files=files)
+    await interaction.followup.send(responseMsg,files=files,ephemeral=True) # ephemeral required for button interactions
 
 async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None:
     potentialBPCodes = blueprints.getPotentialBPCodesInString(
@@ -698,6 +716,44 @@ async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None
     if len(potentialBPCodes) != 1:
         return None
     return potentialBPCodes[0]
+
+async def accessBlueprintCommandFromMessage(interaction:discord.Interaction,message:discord.Message) -> None:
+
+    async def getBPCode() -> tuple[str,bool]:
+        potentialBPCode = await getSinglePotentialBPCodeInMessage(message)
+        if potentialBPCode is None:
+            return "Message doesn't contain exactly one blueprint code",False
+        return potentialBPCode,True
+
+    await accessBlueprintCommandInnerPart(interaction,getBPCode)
+
+class BPInfoMessageButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(discord.ui.Button(
+            label = "View in 3D / Convert file format",
+            style = discord.ButtonStyle.grey,
+            custom_id = "accessBP"
+        ))
+
+async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> None:
+
+    assert interaction.message.type == discord.MessageType.reply
+
+    msgRef = interaction.message.reference
+
+    if type(msgRef.resolved) == discord.DeletedReferencedMessage:
+        return
+
+    if msgRef.resolved is None:
+        try:
+            message = await interaction.channel.fetch_message(msgRef.message_id)
+        except discord.NotFound:
+            return
+    else:
+        message = msgRef.resolved
+
+    await accessBlueprintCommandFromMessage(interaction,message)
 
 ##################################################
 
@@ -724,6 +780,8 @@ def runDiscordBot() -> None:
     @client.event
     async def on_error(event:str,*args,**kwargs) -> None:
         await globalLogError()
+        if event == "on_interaction":
+            await interactionErrorHandler(args[0],sys.exception())
 
     @client.event
     async def on_message(message:discord.Message) -> None:
@@ -776,7 +834,12 @@ def runDiscordBot() -> None:
                     return
                 responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
                 try:
-                    await message.reply(safenString(responseMsg),files=files,mention_author=False)
+                    await message.reply(
+                        safenString(responseMsg),
+                        files=files,
+                        mention_author=False,
+                        view=BPInfoMessageButtons()
+                    )
                 except discord.HTTPException:
                     return
                 reactedToBPCodeInMsg = True
@@ -808,7 +871,13 @@ def runDiscordBot() -> None:
     async def on_interaction(interaction:discord.Interaction) -> None:
         if interaction.type != discord.InteractionType.component:
             return
-        await buttonCallbacks[interaction.data["custom_id"]](interaction)
+        action = interaction.data["custom_id"]
+        if action.startswith("antispam-"):
+            await antispamAlertButtonInteraction(interaction,action.removeprefix("antispam-"))
+        elif action == "accessBP":
+            await bpInfoMessageButtonInteraction(interaction)
+        else:
+            await globalLogMessage(f"Unknown button action '{action}' for {interaction.message.jump_url}")
 
     @tree.error
     async def on_error(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
@@ -1449,14 +1518,7 @@ def runDiscordBot() -> None:
 
     @tree.context_menu(name="access-blueprint")
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message):
-
-        async def getBPCode() -> tuple[str,bool]:
-            potentialBPCode = await getSinglePotentialBPCodeInMessage(message)
-            if potentialBPCode is None:
-                return "Message doesn't contain exactly one blueprint code",False
-            return potentialBPCode,True
-
-        await accessBlueprintCommandInnerPart(interaction,getBPCode)
+        await accessBlueprintCommandFromMessage(interaction,message)
 
     try:
         with open(globalInfos.TOKEN_PATH) as f:
@@ -1474,4 +1536,3 @@ antiSpamLastMessages:dict[tuple[int,int],dict[str,str|list[discord.Message]|int|
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
 msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}
 shapeViewerLastErrors:dict[int,dict[str,int|datetime.datetime]] = {}
-buttonCallbacks:dict[str,typing.Callable[[discord.Interaction],None]] = {}

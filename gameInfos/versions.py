@@ -149,7 +149,8 @@ GAME_VERSIONS = {
         "0.1.0-pre5-rc1",
         "0.1.0-pre6-rc1",
         "0.1.0-pre7-rc1",
-        "0.1.0-pre8-rc1"
+        "0.1.0-pre8-rc1",
+        "0.1.1"
     ]
 }
 LATEST_GAME_VERSION = list(GAME_VERSIONS.keys())[-1]
