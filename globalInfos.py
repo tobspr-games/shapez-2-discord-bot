@@ -24,13 +24,7 @@ SLASH_CMD_BP_PARAM_DESC = "The full blueprint code"
 SLASH_CMD_BP_FILE_PARAM_DESC = "A file containing the blueprint code"
 
 # shape viewer
-INITIAL_SHAPE_SIZE = 500
-SHAPE_COLORS = ["u","r","g","b","c","m","y","w"]
-SHAPE_LAYER_SEPARATOR = ":"
-SHAPE_NOTHING_CHAR = "-"
 SHAPE_CHAR_REPLACEMENT = {} # unused but kept just in case
-SHAPE_CONFIG_QUAD = "quad"
-SHAPE_CONFIG_HEX = "hex"
 SHAPE_VIEWER_SLASH_CMD_TIP_NUM_ERRORS = 4
 SHAPE_VIEWER_SLASH_CMD_TIP_TIME_INTERVAL_SECONDS = 30
 

@@ -1,6 +1,6 @@
 import globalInfos
 import discord
-import pygamePIL
+import shapez2
 import io
 
 async def _debugMenuCheck(message:discord.Message) -> str|None:
@@ -42,8 +42,8 @@ async def _debugMenuCheck(message:discord.Message) -> str|None:
 
     with io.BytesIO(imageBytes) as buffer:
         try:
-            image = pygamePIL.image_load(buffer)
-        except pygamePIL.error:
+            image = shapez2.pygamePIL.image_load(buffer)
+        except shapez2.pygamePIL.error:
             return None
 
     imageWidth, imageHeight = image.get_size()

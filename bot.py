@@ -3,16 +3,14 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = ""
 
 import responses
 import globalInfos
-import blueprints
 import operationGraph
 import utils
-import gameInfos
 import researchViewer
 import guildSettings
 import shapeCodeGenerator
 import autoMessages
-import shapeViewer
 
+import shapez2 as spz2
 import discord
 import json
 import sys
@@ -286,6 +284,96 @@ def isFileTooBig(fileSize:int,guild:discord.Guild|None) -> bool:
         return fileSize > discord.utils.DEFAULT_FILE_SIZE_LIMIT_BYTES
     return fileSize > guild.filesize_limit
 
+BP_VERSION_REACTION_A = "\U0001f1e6"
+BP_VERSION_REACTION_C = "\U0001f1e8"
+BP_VERSION_REACTION_D = "\U0001f1e9"
+BP_VERSION_REACTION_P = "\U0001f1f5"
+BP_VERSION_REACTION_R = "\U0001f1f7"
+BP_VERSION_REACTION_DOT_1 = "\u23fa"
+BP_VERSION_REACTION_DOT_2 = 1261037521496965202
+BP_VERSION_REACTION_DOT_3 = 1333165681281339503
+BP_VERSION_REACTION_DIGITS:list[dict[str,str|int]] = [
+    {str(i) : f"{i}\ufe0f\u20e3" for i in range(10)},
+    {str(i) : v for i,v in enumerate([
+        1159909769876877352,1159909772133400707,1159909773643358228,
+        1159909775526592512,1159909784305283133,1159909786956087326,
+        1159909788130476124,1159909789741105282,1159909792106676405,
+        1159909793578877028
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1159909533074866286,1159909535872471162,1159909537944457226,
+        1159909542193270824,1159909546735702108,1159909549323587757,
+        1159909551697576056,1159909554532913203,1159909556336468008,
+        1159909559066964110
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173576563687516,1333173578148876319,1333173580166463569,
+        1333173581474959372,1333173589674954832,1333173591365255329,
+        1333173593269469244,1333173594930413579,1333173596901867530,
+        1333173598407626752
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173698345177138,1333173700429746297,1333173701830643847,
+        1333173704078921842,1333173705756512297,1333173708008849540,
+        1333173709531250708,1333173712148627516,1333173713822286006,
+        1333173715554275430
+    ])},
+    {str(i) : v for i,v in enumerate([
+        1333173795329933424,1333173796936482897,1333173798458888262,
+        1333173800145129523,1333173801659400326,1333173803358093393,
+        1333173805409107968,1333173807095218248,1333173808609361940,
+        1333173811171954800
+    ])}
+]
+
+def versionNumToReactions(version:int) -> None|list[str|int]:
+
+    versionTexts = spz2.versions.GAME_VERSIONS.get(version)
+
+    if versionTexts is None:
+        return None
+
+    versionText = versionTexts[-1]
+
+    decomposed = spz2.versions._getDecomposedVersionId(versionText)
+
+    output = [
+        BP_VERSION_REACTION_DIGITS[0][decomposed["main"][0]],
+        BP_VERSION_REACTION_DOT_1,
+        BP_VERSION_REACTION_DIGITS[1][decomposed["main"][1]],
+        BP_VERSION_REACTION_DOT_2,
+        BP_VERSION_REACTION_DIGITS[2][decomposed["main"][2]]
+    ]
+
+    digitsIndex = 3
+
+    for suffix in decomposed["suffixes"]:
+
+        if suffix["type"] == "alpha":
+            output.append(BP_VERSION_REACTION_A)
+            for num in suffix["num"][0]:
+                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][num])
+                digitsIndex += 1
+            if len(suffix["num"]) > 1:
+                output.append(BP_VERSION_REACTION_DOT_3)
+                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"][1]])
+                digitsIndex += 1
+
+        elif suffix["type"] == "rc":
+            output.extend([BP_VERSION_REACTION_R,BP_VERSION_REACTION_C])
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            digitsIndex += 1
+
+        elif suffix["type"] == "preview":
+            output.append(BP_VERSION_REACTION_P)
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            digitsIndex += 1
+
+        elif suffix["type"] == "demo":
+            output.append(BP_VERSION_REACTION_D)
+
+    return output
+
 def detectBPVersion(potentialBPCodes:list[str]) -> list[str|int]|None:
 
     versions = []
@@ -293,11 +381,11 @@ def detectBPVersion(potentialBPCodes:list[str]) -> list[str|int]|None:
     for bp in potentialBPCodes:
 
         try:
-            version = blueprints.getBlueprintVersion(bp)
-        except blueprints.BlueprintError:
+            version = spz2.blueprints.getBlueprintVersion(bp)
+        except spz2.blueprints.BlueprintError:
             continue
 
-        versionReaction = gameInfos.versions.versionNumToReactions(version)
+        versionReaction = versionNumToReactions(version)
 
         if versionReaction is None:
             continue
@@ -541,37 +629,37 @@ async def concatMsgContentAndAttachments(content:str,attachments:list[discord.At
         content += fileContent
     return content
 
-def getBPInfoText(blueprint:blueprints.Blueprint,advanced:bool) -> str:
+def getBPInfoText(blueprint:spz2.blueprints.Blueprint,advanced:bool) -> str:
 
-    def formatCounts(bp:blueprints.BuildingBlueprint|blueprints.IslandBlueprint|None,name:str) -> str:
+    def formatCounts(bp:spz2.blueprints.BuildingBlueprint|spz2.blueprints.IslandBlueprint|None,name:str) -> str:
         output = f"\n**{name} counts :**\n"
         if bp is None:
             output += "None"
         else:
-            if type(bp) == blueprints.BuildingBlueprint:
+            if type(bp) == spz2.blueprints.BuildingBlueprint:
                 counts = bp.getBuildingCounts()
                 lines = []
-                for iv,bc in gameInfos.buildings.getCategorizedBuildingCounts(counts).items():
-                    lines.append(f"- `{gameInfos.buildings.allInternalVariantLists[iv].title}` : `{utils.sepInGroupsNumber(sum(bc.values()))}`")
+                for iv,bc in spz2.buildings.getCategorizedBuildingCounts(counts).items():
+                    lines.append(f"- `{spz2.buildings.allInternalVariantLists[iv].title}` : `{utils.sepInGroupsNumber(sum(bc.values()))}`")
                     for b,c in bc.items():
                         lines.append(f"  - `{b}` : `{utils.sepInGroupsNumber(c)}`")
                 output += "\n".join(lines)
             else:
                 counts = bp.getIslandCounts()
-                output += "\n".join(f"- `{gameInfos.islands.allIslands[k].title}` : `{utils.sepInGroupsNumber(v)}`" for k,v in counts.items())
+                output += "\n".join(f"- `{spz2.islands.allIslands[k].title}` : `{utils.sepInGroupsNumber(v)}`" for k,v in counts.items())
         return output
 
-    versionTxt = gameInfos.versions.versionNumToText(blueprint.version,advanced)
+    versionTxt = spz2.versions.versionNumToText(blueprint.version,advanced)
     if versionTxt is None:
         versionTxt = "Unknown"
     elif advanced:
         versionTxt = f"[{', '.join(f'`{txt}`' for txt in versionTxt)}]"
     else:
         versionTxt = f"`{versionTxt}`"
-    bpTypeTxt = "Platform" if blueprint.type == blueprints.ISLAND_BP_TYPE else "Building"
+    bpTypeTxt = "Platform" if blueprint.type == spz2.blueprints.ISLAND_BP_TYPE else "Building"
     try:
         bpCost = f"`{utils.sepInGroupsNumber(blueprint.getCost())}`"
-    except blueprints.BlueprintError:
+    except spz2.blueprints.BlueprintError:
         bpCost = f"<Failed to compute>"
 
     responseParts = [[
@@ -597,7 +685,7 @@ def getBPInfoText(blueprint:blueprints.Blueprint,advanced:bool) -> str:
             f"Platform tiles : `{utils.sepInGroupsNumber(blueprint.islandBP.getTileCount())}`"
         ])
 
-    blueprintIcons = (blueprint.buildingBP if blueprint.type == blueprints.BUILDING_BP_TYPE else blueprint.islandBP).getValidIcons()
+    blueprintIcons = (blueprint.buildingBP if blueprint.type == spz2.blueprints.BUILDING_BP_TYPE else blueprint.islandBP).getValidIcons()
     blueprintIconsStr = []
     for icon in blueprintIcons:
         if icon.type == "empty":
@@ -620,7 +708,7 @@ def getBPInfoText(blueprint:blueprints.Blueprint,advanced:bool) -> str:
     return finalOutput
 
 def getAccessBPTextAndFiles(
-    blueprint:blueprints.Blueprint,
+    blueprint:spz2.blueprints.Blueprint,
     blueprintCode:str,
     guild:discord.Guild|None,
     includeBigFiles:bool
@@ -698,8 +786,8 @@ async def accessBlueprintCommandInnerPart(
             return
 
         try:
-            decodedBP = blueprints.decodeBlueprint(toProcessBlueprint)
-        except blueprints.BlueprintError as e:
+            decodedBP = spz2.blueprints.decodeBlueprint(toProcessBlueprint)
+        except spz2.blueprints.BlueprintError as e:
             responseMsg = f"Error while decoding blueprint : {e}"
             return
 
@@ -710,7 +798,7 @@ async def accessBlueprintCommandInnerPart(
     await interaction.followup.send(responseMsg,files=files,ephemeral=True) # ephemeral required for button interactions
 
 async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None:
-    potentialBPCodes = blueprints.getPotentialBPCodesInString(
+    potentialBPCodes = spz2.blueprints.getPotentialBPCodesInString(
         await concatMsgContentAndAttachments(message.content,message.attachments)
     )
     if len(potentialBPCodes) != 1:
@@ -829,8 +917,8 @@ def runDiscordBot() -> None:
                 if potentialBP is None:
                     return
                 try:
-                    decodedBP = blueprints.decodeBlueprint(potentialBP)
-                except blueprints.BlueprintError:
+                    decodedBP = spz2.blueprints.decodeBlueprint(potentialBP)
+                except spz2.blueprints.BlueprintError:
                     return
                 responseMsg, files = getAccessBPTextAndFiles(decodedBP,potentialBP,message.guild,False)
                 try:
@@ -857,7 +945,7 @@ def runDiscordBot() -> None:
             # blueprint version reaction
             if not reactedToBPCodeInMsg:
                 msgContent = await concatMsgContentAndAttachments(message.content,message.attachments)
-                bpReactions = detectBPVersion(blueprints.getPotentialBPCodesInString(msgContent))
+                bpReactions = detectBPVersion(spz2.blueprints.getPotentialBPCodesInString(msgContent))
                 if bpReactions is not None:
                     for reaction in bpReactions:
                         if type(reaction) == int:
@@ -1123,9 +1211,9 @@ def runDiscordBot() -> None:
                 return
 
             try:
-                responseMsg = blueprints.encodeBlueprint(blueprints.decodeBlueprint(toProcessBlueprint,True))
+                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.decodeBlueprint(toProcessBlueprint,True))
                 noErrors = True
-            except blueprints.BlueprintError as e:
+            except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error happened : {e}"
 
         responseMsg:str; noErrors:bool
@@ -1200,7 +1288,7 @@ def runDiscordBot() -> None:
         public:bool=False,
         see_shape_vars:bool=False,
         spoiler:bool=False,
-        color_skin:shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapeViewer.EXTERNAL_COLOR_SKINS[0],
+        color_skin:spz2.shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=spz2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
         max_shape_layers:int=4
     ) -> None:
         if exitCommandWithoutResponse(interaction):
@@ -1272,8 +1360,8 @@ def runDiscordBot() -> None:
                 return
 
             try:
-                decodedBP = blueprints.decodeBlueprint(toProcessBlueprint)
-            except blueprints.BlueprintError as e:
+                decodedBP = spz2.blueprints.decodeBlueprint(toProcessBlueprint)
+            except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error while decoding blueprint : {e}"
                 return
 
@@ -1303,7 +1391,7 @@ def runDiscordBot() -> None:
                 return
 
             await interaction.response.defer(ephemeral=not public)
-            if level < 0 or level > len(gameInfos.research.reserachTree):
+            if level < 0 or level > len(spz2.research.reserachTree):
                 responseMsg = "Error : invalid level"
                 return
 
@@ -1313,7 +1401,7 @@ def runDiscordBot() -> None:
                     responseMsg = "Error : 'node' parameter provided but not 'level' parameter"
                     return
 
-                curLevel = gameInfos.research.reserachTree[level-1]
+                curLevel = spz2.research.reserachTree[level-1]
                 if node < 1 or node > len(curLevel.sideGoals)+1:
                     responseMsg = "Error : invalid node"
                     return
@@ -1412,8 +1500,8 @@ def runDiscordBot() -> None:
                 return
 
             blueprintInfos:tuple[int,int] = (
-                gameInfos.versions.LATEST_MAJOR_VERSION,
-                gameInfos.versions.LATEST_GAME_VERSION
+                spz2.versions.LATEST_MAJOR_VERSION,
+                spz2.versions.LATEST_GAME_VERSION
             )
 
             if to_create.startswith("item-producer-w-"):
@@ -1439,27 +1527,27 @@ def runDiscordBot() -> None:
                 buildingExtra = {"type":"shape","value":shapeCodes[0]}
 
                 try:
-                    responseMsg = blueprints.encodeBlueprint(blueprints.Blueprint(
+                    responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.Blueprint(
                         *blueprintInfos,
-                        blueprints.BUILDING_BP_TYPE,
-                        blueprints.BuildingBlueprint([blueprints.BuildingEntry(
-                            utils.Pos(0,0),
-                            utils.Rotation(0),
-                            gameInfos.buildings.allBuildings["SandboxItemProducerDefaultInternalVariant"],
+                        spz2.blueprints.BUILDING_BP_TYPE,
+                        spz2.blueprints.BuildingBlueprint([spz2.blueprints.BuildingEntry(
+                            spz2.utils.Pos(0,0),
+                            spz2.utils.Rotation(0),
+                            spz2.buildings.allBuildings["SandboxItemProducerDefaultInternalVariant"],
                             buildingExtra
-                        )],blueprints.getDefaultBlueprintIcons(blueprints.BUILDING_BP_TYPE))
+                        )],spz2.blueprints.getDefaultBlueprintIcons(spz2.blueprints.BUILDING_BP_TYPE))
                     ))
                     noErrors = True
-                except blueprints.BlueprintError as e:
+                except spz2.blueprints.BlueprintError as e:
                     responseMsg = f"Error happened while creating blueprint : {e}"
                 return
 
             to_create = to_create.removeprefix("all-")
             toCreateBuildings = to_create == "buildings"
             toPlaceList = (
-                gameInfos.buildings.allBuildings.values()
+                spz2.buildings.allBuildings.values()
                 if toCreateBuildings else
-                gameInfos.islands.allIslands.values()
+                spz2.islands.allIslands.values()
             )
             curX = 0
             entryList = []
@@ -1472,24 +1560,24 @@ def runDiscordBot() -> None:
                 minZ = min(t.z for t in curTiles)
                 maxX = max(t.x for t in curTiles)
                 curX -= minX
-                shared:tuple[utils.Pos,utils.Rotation,gameInfos.buildings.Building|gameInfos.islands.Island,None] = (
-                    utils.Pos(curX,0,-minZ),utils.Rotation(0),toPlace,None)
+                shared:tuple[spz2.utils.Pos,spz2.utils.Rotation,spz2.buildings.Building|spz2.islands.Island,None] = (
+                    spz2.utils.Pos(curX,0,-minZ),spz2.utils.Rotation(0),toPlace,None)
                 if toCreateBuildings:
-                    entryList.append(blueprints.BuildingEntry(*shared))
+                    entryList.append(spz2.blueprints.BuildingEntry(*shared))
                 else:
-                    entryList.append(blueprints.IslandEntry(*shared,None))
+                    entryList.append(spz2.blueprints.IslandEntry(*shared,None))
                 curX += maxX + 1
 
-            bpType = blueprints.BUILDING_BP_TYPE if toCreateBuildings else blueprints.ISLAND_BP_TYPE
+            bpType = spz2.blueprints.BUILDING_BP_TYPE if toCreateBuildings else spz2.blueprints.ISLAND_BP_TYPE
             try:
-                responseMsg = blueprints.encodeBlueprint(blueprints.Blueprint(
+                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.Blueprint(
                     *blueprintInfos,
                     bpType,
-                    (blueprints.BuildingBlueprint if toCreateBuildings else blueprints.IslandBlueprint)
-                    (entryList,blueprints.getDefaultBlueprintIcons(bpType))
+                    (spz2.blueprints.BuildingBlueprint if toCreateBuildings else spz2.blueprints.IslandBlueprint)
+                    (entryList,spz2.blueprints.getDefaultBlueprintIcons(bpType))
                 ))
                 noErrors = True
-            except blueprints.BlueprintError as e:
+            except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error happened while creating blueprint : {e}"
 
         responseMsg:str; noErrors:bool

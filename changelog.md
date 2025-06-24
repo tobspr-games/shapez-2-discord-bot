@@ -1,3 +1,6 @@
+## 24 Jun 25
+- Move parts of the code that aren't specific to the bot to its own library : https://pypi.org/project/shapez2/
+
 ## 23 Jun 25
 - Update for 0.1.1 :
   - Add version in game infos

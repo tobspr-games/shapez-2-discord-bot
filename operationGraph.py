@@ -1,10 +1,9 @@
-import shapeOperations
+import shapez2
+from shapez2 import pygamePIL, shapeOperations
 import shapeCodeGenerator
 import globalInfos
-import shapeViewer
 import utils
 from utils import OutputString
-import pygamePIL
 import io
 import typing
 
@@ -176,7 +175,7 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
 
         for i,input in enumerate(inputs):
             if i in curOperation.colorInputindexes:
-                if input not in globalInfos.SHAPE_COLORS:
+                if input not in shapez2.gameData.SHAPE_COLORS:
                     return False,OutputString("Input ",OutputString.Number(i,True)," must be a color")
                 colorInputs.append(input)
             else:
@@ -221,7 +220,7 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
 def genOperationGraph(
     instructions:list[Instruction],
     showShapeVars:bool,
-    colorSkin:shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapeViewer.EXTERNAL_COLOR_SKINS[0],
+    colorSkin:shapez2.shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapez2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
     maxShapeLayers:int=4
 ) -> tuple[bool,str|OutputString|tuple[tuple[io.BytesIO,int],dict[int,str]]]:
 
@@ -285,7 +284,7 @@ def genOperationGraph(
     wasProcessingInstructionIndex:int
 
     def renderShape(shapeCode:str,shapeConfig:str) -> pygamePIL.Surface:
-        return shapeViewer.renderShape(shapeCode,GRAPH_NODE_SIZE,colorSkin,shapeConfig)
+        return shapez2.shapeViewer.renderShape(shapeCode,GRAPH_NODE_SIZE,colorSkin,shapeConfig)
 
     def newId() -> int:
         nonlocal curId
@@ -460,7 +459,7 @@ def genOperationGraph(
                 for colorIndex,color in enumerate(node.colorInputs):
                     pygamePIL.draw_rect(
                         graphSurface,
-                        shapeViewer.getShapeColor(color,colorSkin),
+                        shapez2.shapeViewer.getShapeColor(color,colorSkin),
                         pygamePIL.Rect(
                             node.pos[0] + GRAPH_NODE_SIZE - NODE_COLOR_INPUT_WIDTH,
                             node.pos[1] + (curColorInputHeight*colorIndex),

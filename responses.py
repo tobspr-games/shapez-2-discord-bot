@@ -1,8 +1,7 @@
 import shapeCodeGenerator
-import shapeViewer
+import shapez2
 import globalInfos
 import utils
-import pygamePIL
 import io
 import typing
 
@@ -61,8 +60,8 @@ DISPLAY_PARAMS:dict[str,DisplayParam] = {
     "3d" : DisplayParam("bool",False),
     "colors" : DisplayParam(
         "str",
-        shapeViewer.EXTERNAL_COLOR_SKINS[0],
-        strAllowedValues=shapeViewer.EXTERNAL_COLOR_SKINS,
+        shapez2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
+        strAllowedValues=shapez2.shapeViewer.EXTERNAL_COLOR_SKINS,
         strCaseMatters=False
     )
 }
@@ -106,14 +105,14 @@ def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],b
 
     numShapes = len(shapeCodes)
     size = curDisplayParams["size"]
-    finalImage = pygamePIL.Surface(
+    finalImage = shapez2.pygamePIL.Surface(
         (size*min(globalInfos.SHAPES_PER_ROW,numShapes),size*(((numShapes-1)//globalInfos.SHAPES_PER_ROW)+1)),
-        pygamePIL.SRCALPHA)
+        shapez2.pygamePIL.SRCALPHA)
 
     renderedShapesCache = {}
     for i,code in enumerate(shapeCodes):
         if renderedShapesCache.get(code) is None:
-            renderedShapesCache[code] = shapeViewer.renderShape(code[0],size,curDisplayParams["colors"],code[1])
+            renderedShapesCache[code] = shapez2.shapeViewer.renderShape(code[0],size,curDisplayParams["colors"],code[1])
         divMod = divmod(i,globalInfos.SHAPES_PER_ROW)
         finalImage.blit(renderedShapesCache[code],(size*divMod[1],size*divMod[0]))
 
