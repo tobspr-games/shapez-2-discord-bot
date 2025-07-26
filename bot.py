@@ -1,11 +1,11 @@
 import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = ""
 
-import responses
+import shapeViewerWrapper
 import globalInfos
 import operationGraph
 import utils
-import researchViewer
+# import researchViewer
 import guildSettings
 import shapeCodeGenerator
 import autoMessages
@@ -18,12 +18,18 @@ import traceback
 import io
 import typing
 import datetime
+from collections.abc import Callable
+
+
+
+#region utility functions
 
 async def globalLogMessage(message:str,sendInCodeBlock:bool=False) -> None:
     if globalInfos.GLOBAL_LOG_CHANNEL is None:
         print(message)
     else:
         logChannel = client.get_channel(globalInfos.GLOBAL_LOG_CHANNEL)
+        assert isinstance(logChannel,discord.TextChannel)
         await logChannel.send(**getCommandResponse(
             message,None,logChannel.guild,True,
             ("```","```") if sendInCodeBlock else ("","")
@@ -33,45 +39,54 @@ async def globalLogError() -> None:
     await globalLogMessage(("".join(traceback.format_exception(*sys.exc_info())))[:-1],True)
 
 async def useShapeViewer(userMessage:str,sendErrors:bool,userId:int) -> tuple[bool,str,tuple[discord.File,int]|None]:
+
+    msgParts = []
+    hasErrors = False
+    file = None
+    imageSize = None
+
+    def inner() -> None:
+        nonlocal hasErrors, file, imageSize
+
+        renderResult = shapeViewerWrapper.renderShapes(userMessage)
+
+        if not renderResult["hasPotentialShapeCodes"]:
+            if sendErrors:
+                msgParts.append(renderResult["errorMsgs"][0])
+            return
+
+        if len(renderResult["errorMsgs"]) > 0:
+            hasErrors = True
+            if sendErrors:
+                msgParts.append("**Error messages :**\n"+"\n".join(f"- {msg}" for msg in renderResult["errorMsgs"]))
+
+        if renderResult["finalImage"] is None:
+            return
+
+        file = discord.File(renderResult["finalImage"][0],"shapes.png",spoiler=renderResult["spoiler"])
+        imageSize = renderResult["finalImage"][1]
+
+        if renderResult["shapeCodes"] is not None:
+            msgParts.append(
+                "**Resulting shape codes :**\n"+
+                "\n".join(
+                    " ".join(f"{{{code}}}" for code in codeGroup)
+                    for codeGroup in discord.utils.as_chunks(renderResult["shapeCodes"],globalInfos.SHAPES_PER_ROW)
+                )
+            )
+
+        if renderResult["viewer3dLinks"] is not None:
+            msgParts.append(
+                "**3D viewer links :**\n"+
+                "\n".join(
+                    " ".join(f"{{{link}}}" for link in linkGroup)
+                    for linkGroup in discord.utils.as_chunks(renderResult["viewer3dLinks"],globalInfos.SHAPES_PER_ROW)
+                )
+            )
+
     try:
 
-        response = responses.handleResponse(userMessage)
-        msgParts = []
-        hasErrors = False
-        file = None
-
-        if response is None:
-            if sendErrors:
-                msgParts.append("No potential shape codes detected")
-
-        else:
-            response, hasInvalid, errorMsgs = response
-
-            if hasInvalid:
-                hasErrors = True
-                if sendErrors:
-                    msgParts.append("**Error messages :**\n"+"\n".join(f"- {msg}" for msg in errorMsgs))
-
-            if response is not None:
-
-                (image, imageSize), spoiler, resultingShapeCodes, viewer3dLinks = response
-                file = discord.File(image,"shapes.png",spoiler=spoiler)
-                if resultingShapeCodes is not None:
-                    msgParts.append(
-                        "**Resulting shape codes :**\n"+
-                        "\n".join(
-                            " ".join(f"{{{code}}}" for code in codeGroup)
-                            for codeGroup in discord.utils.as_chunks(resultingShapeCodes,globalInfos.SHAPES_PER_ROW)
-                        )
-                    )
-                if viewer3dLinks is not None:
-                    msgParts.append(
-                        "**3D viewer links :**\n"+
-                        "\n".join(
-                            " ".join(f"{{{link}}}" for link in linkGroup)
-                            for linkGroup in discord.utils.as_chunks(viewer3dLinks,globalInfos.SHAPES_PER_ROW)
-                        )
-                    )
+        inner()
 
         curTime = getCurrentTime()
         for user in list(shapeViewerLastErrors.keys()):
@@ -93,7 +108,6 @@ async def useShapeViewer(userMessage:str,sendErrors:bool,userId:int) -> tuple[bo
         responseMsg = "\n\n".join(msgParts)
 
         return hasErrors, responseMsg, (None if file is None else (file, imageSize))
-
     except Exception as e:
         await globalLogError()
         return True, f"{globalInfos.UNKNOWN_ERROR_TEXT} ({e.__class__.__name__})" if sendErrors else "", None
@@ -161,7 +175,7 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
             guildId = None
         else:
             guildId = message.guild.id
-            if type(message.author) == discord.User:
+            if isinstance(message.author,discord.User):
                 userRoles = []
                 adminPerm = False
             else:
@@ -174,7 +188,7 @@ async def hasPermission(requestedLvl:int,*,message:discord.Message|None=None,int
         channelId = interaction.channel_id
         guildId = interaction.guild_id
         if interaction.guild is not None:
-            if type(interaction.user) == discord.User:
+            if isinstance(interaction.user,discord.User):
                 userRoles = []
                 adminPerm = False
             else:
@@ -328,48 +342,46 @@ BP_VERSION_REACTION_DIGITS:list[dict[str,str|int]] = [
 
 def versionNumToReactions(version:int) -> None|list[str|int]:
 
-    versionTexts = spz2.versions.GAME_VERSIONS.get(version)
+    versionIds = spz2.versions.GAME_VERSIONS.get(version)
 
-    if versionTexts is None:
+    if versionIds is None:
         return None
 
-    versionText = versionTexts[-1]
+    decomposed = spz2.versions.getVersionNameFromId(versionIds[-1])
 
-    decomposed = spz2.versions._getDecomposedVersionId(versionText)
-
-    output = [
-        BP_VERSION_REACTION_DIGITS[0][decomposed["main"][0]],
+    output:list[str|int] = [
+        BP_VERSION_REACTION_DIGITS[0][decomposed.major],
         BP_VERSION_REACTION_DOT_1,
-        BP_VERSION_REACTION_DIGITS[1][decomposed["main"][1]],
+        BP_VERSION_REACTION_DIGITS[1][decomposed.minor],
         BP_VERSION_REACTION_DOT_2,
-        BP_VERSION_REACTION_DIGITS[2][decomposed["main"][2]]
+        BP_VERSION_REACTION_DIGITS[2][decomposed.patch]
     ]
 
     digitsIndex = 3
 
-    for suffix in decomposed["suffixes"]:
+    for suffix in decomposed.suffixes:
 
-        if suffix["type"] == "alpha":
+        if isinstance(suffix,spz2.versions.AlphaSuffix):
             output.append(BP_VERSION_REACTION_A)
-            for num in suffix["num"][0]:
+            for num in suffix.version:
                 output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][num])
                 digitsIndex += 1
-            if len(suffix["num"]) > 1:
+            if suffix.subVersion is not None:
                 output.append(BP_VERSION_REACTION_DOT_3)
-                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"][1]])
+                output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix.subVersion])
                 digitsIndex += 1
 
-        elif suffix["type"] == "rc":
+        elif isinstance(suffix,spz2.versions.ReleaseCandidateSuffix):
             output.extend([BP_VERSION_REACTION_R,BP_VERSION_REACTION_C])
-            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix.number])
             digitsIndex += 1
 
-        elif suffix["type"] == "preview":
+        elif isinstance(suffix,spz2.versions.PreviewSuffix):
             output.append(BP_VERSION_REACTION_P)
-            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix["num"]])
+            output.append(BP_VERSION_REACTION_DIGITS[digitsIndex][suffix.number])
             digitsIndex += 1
 
-        elif suffix["type"] == "demo":
+        elif isinstance(suffix,spz2.versions.DemoSuffix):
             output.append(BP_VERSION_REACTION_D)
 
     return output
@@ -400,7 +412,7 @@ def detectBPVersion(potentialBPCodes:list[str]) -> list[str|int]|None:
 def safenString(string:str) -> str:
     return discord.utils.escape_mentions(string)
 
-async def getBPFromStringOrFile(string:str|None,file:discord.Attachment|None) -> str|None:
+async def getBPFromStringOrFile(string:str,file:discord.Attachment|None) -> str|None:
     if file is None:
         toReturn = string
     else:
@@ -409,14 +421,18 @@ async def getBPFromStringOrFile(string:str|None,file:discord.Attachment|None) ->
             return None
     return toReturn.strip()
 
+class getCommandResponseReturn(typing.TypedDict):
+    content:typing.NotRequired[str]
+    file:typing.NotRequired[discord.File]
+
 def getCommandResponse(
     text:str,
     file:tuple[discord.File,int]|None,
     guild:discord.Guild|None,
     public:bool,
     notInFileFormat:tuple[str,str]=("","")
-) -> dict[str,str|discord.File]:
-    kwargs = {}
+) -> getCommandResponseReturn:
+    kwargs:getCommandResponseReturn = {}
 
     if len(notInFileFormat[0])+len(text)+len(notInFileFormat[1]) > globalInfos.MESSAGE_MAX_LENGTH:
         if file is None:
@@ -441,7 +457,7 @@ def getCommandResponse(
 
     return kwargs
 
-async def interactionErrorHandler(interaction:discord.Interaction,error:Exception) -> None:
+async def interactionErrorHandler(interaction:discord.Interaction,error:BaseException) -> None:
     await globalLogError()
     responseMsg = f"{globalInfos.UNKNOWN_ERROR_TEXT} ({error.__class__.__name__})"
     if interaction.response.is_done():
@@ -453,44 +469,47 @@ class AntispamAlertButtons(discord.ui.View):
 
     REASON_MSG = "Request by moderator from antispam alert"
 
-    def __init__(self,user:discord.User|discord.Member,buttonStates:str="1111"):
+    def __init__(self,userId:int,buttonStates:str="1111"):
         super().__init__()
         self.add_item(discord.ui.Button(
             label = "Send info DM",
             style = discord.ButtonStyle.blurple,
-            custom_id = f"antispam-sendDM-{user.id}-{buttonStates}",
+            custom_id = f"antispam-sendDM-{userId}-{buttonStates}",
             disabled = buttonStates[0] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Un-timeout",
             style = discord.ButtonStyle.green,
-            custom_id = f"antispam-untimeout-{user.id}-{buttonStates}",
+            custom_id = f"antispam-untimeout-{userId}-{buttonStates}",
             disabled = buttonStates[1] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Kick",
             style = discord.ButtonStyle.red,
-            custom_id = f"antispam-kick-{user.id}-{buttonStates}",
+            custom_id = f"antispam-kick-{userId}-{buttonStates}",
             disabled = buttonStates[2] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Ban",
             style = discord.ButtonStyle.red,
-            custom_id = f"antispam-ban-{user.id}-{buttonStates}",
+            custom_id = f"antispam-ban-{userId}-{buttonStates}",
             disabled = buttonStates[3] == "0"
         ))
 
 async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawAction:str) -> None:
 
     action, userId, buttonStates = rawAction.split("-")
+    assert interaction.guild is not None
+    assert interaction.message is not None
+    userIdInt = int(userId)
 
     try:
-        user = await interaction.guild.fetch_member(userId)
+        user = await interaction.guild.fetch_member(userIdInt)
     except (discord.Forbidden,discord.NotFound):
-        responseMsg = "Couldn't find user"
         user = None
 
     if user is None:
+        responseMsg = "Couldn't find user"
         disableIndexes = []
 
     elif action == "sendDM":
@@ -530,7 +549,7 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
 
     await interaction.response.send_message(responseMsg,ephemeral=True)
     buttonStates = "".join("0" if i in disableIndexes else state for i,state in enumerate(buttonStates))
-    await interaction.message.edit(view=AntispamAlertButtons(user,buttonStates))
+    await interaction.message.edit(view=AntispamAlertButtons(userIdInt,buttonStates))
 
 # port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
 async def antiSpam(message:discord.Message) -> bool|None:
@@ -542,15 +561,18 @@ async def antiSpam(message:discord.Message) -> bool|None:
             return
 
         curAlertChannel = client.get_channel(curAlertChannel)
-        if curAlertChannel is None:
+        if not isinstance(curAlertChannel,(discord.TextChannel,discord.Thread)):
             return
 
         alertMsg = f"{message.author.mention} triggered the antispam :"
         msgContentFile = msgToFile(msgContent,"messageContent.txt",curAlertChannel.guild)
+        kwargs = {}
         if msgContentFile is None:
             alertMsg += " <couldn't put message content in a file>"
+        else:
+            kwargs["file"] = msgContentFile
 
-        await curAlertChannel.send(alertMsg,file=msgContentFile,view=AntispamAlertButtons(message.author))
+        await curAlertChannel.send(alertMsg,view=AntispamAlertButtons(message.author.id),**kwargs)
 
     if globalPaused:
         return
@@ -592,7 +614,7 @@ async def antiSpam(message:discord.Message) -> bool|None:
             messages:list[discord.Message] = curInfo["messages"]
             curInfo["messages"] = []
 
-            if not message.author.is_timed_out():
+            if (isinstance(message.author,discord.Member)) and (not message.author.is_timed_out()):
                 try:
 
                     await message.author.timeout(
@@ -613,7 +635,7 @@ async def antiSpam(message:discord.Message) -> bool|None:
                     return True
         return
 
-    newInfo = {
+    newInfo:antiSpamLastMessagesType = {
         "content" : msgContent,
         "messages" : [message],
         "count" : 1,
@@ -636,27 +658,37 @@ def getBPInfoText(blueprint:spz2.blueprints.Blueprint,advanced:bool) -> str:
         if bp is None:
             output += "None"
         else:
-            if type(bp) == spz2.blueprints.BuildingBlueprint:
+            if isinstance(bp,spz2.blueprints.BuildingBlueprint):
                 counts = bp.getBuildingCounts()
                 lines = []
-                for iv,bc in spz2.buildings.getCategorizedBuildingCounts(counts).items():
-                    lines.append(f"- `{spz2.buildings.allInternalVariantLists[iv].title}` : `{utils.sepInGroupsNumber(sum(bc.values()))}`")
-                    for b,c in bc.items():
-                        lines.append(f"  - `{b}` : `{utils.sepInGroupsNumber(c)}`")
+                for bv,bc in spz2.buildings.getCategorizedBuildingCounts(counts).items():
+                    lines.append(f"- `{bv.title.translate().renderToStringNoFeatures()}` : `{utils.sepInGroupsNumber(sum(bc.values()))}`")
+                    for biv,c in bc.items():
+                        lines.append(f"  - `{biv.id}` : `{utils.sepInGroupsNumber(c)}`")
                 output += "\n".join(lines)
             else:
                 counts = bp.getIslandCounts()
-                output += "\n".join(f"- `{spz2.islands.allIslands[k].title}` : `{utils.sepInGroupsNumber(v)}`" for k,v in counts.items())
+                lines = []
+                for ig,ic in spz2.islands.getCategorizedIslandCounts(counts).items():
+                    lines.append(f"- `{ig.title.translate().renderToStringNoFeatures()}` : `{utils.sepInGroupsNumber(sum(ic.values()))}`")
+                    for i,c in ic.items():
+                        lines.append(f"  - `{i.title.translate().renderToStringNoFeatures()}` : `{utils.sepInGroupsNumber(c)}`")
+                output += "\n".join(lines)
         return output
 
-    versionTxt = spz2.versions.versionNumToText(blueprint.version,advanced)
-    if versionTxt is None:
+    versionIds = spz2.versions.GAME_VERSIONS.get(blueprint.version)
+    if versionIds is None:
         versionTxt = "Unknown"
-    elif advanced:
-        versionTxt = f"[{', '.join(f'`{txt}`' for txt in versionTxt)}]"
     else:
-        versionTxt = f"`{versionTxt}`"
-    bpTypeTxt = "Platform" if blueprint.type == spz2.blueprints.ISLAND_BP_TYPE else "Building"
+        if not advanced:
+            versionIds = versionIds[-1:]
+        versionNames = [spz2.versions.getVersionNameFromId(v) for v in versionIds]
+        versionStrings = [spz2.versions.versionNameToString(v) for v in versionNames]
+        if advanced:
+            versionTxt = f"[{', '.join(f"`{v}`" for v in versionStrings)}]"
+        else:
+            versionTxt = f"`{versionStrings[0]}`"
+    bpTypeTxt = "Platform" if blueprint.type == spz2.blueprints.BlueprintType.island else "Building"
     try:
         bpCost = f"`{utils.sepInGroupsNumber(blueprint.getCost())}`"
     except spz2.blueprints.BlueprintError:
@@ -685,15 +717,14 @@ def getBPInfoText(blueprint:spz2.blueprints.Blueprint,advanced:bool) -> str:
             f"Platform tiles : `{utils.sepInGroupsNumber(blueprint.islandBP.getTileCount())}`"
         ])
 
-    blueprintIcons = (blueprint.buildingBP if blueprint.type == spz2.blueprints.BUILDING_BP_TYPE else blueprint.islandBP).getValidIcons()
     blueprintIconsStr = []
-    for icon in blueprintIcons:
-        if icon.type == "empty":
+    for icon in blueprint.innerBlueprint.getValidIcons():
+        if icon.type == spz2.blueprints.BlueprintIconType.empty:
             blueprintIconsStr.append("<empty>")
-        elif icon.type == "icon":
-            blueprintIconsStr.append(f"`{icon.value}`")
+        elif icon.type == spz2.blueprints.BlueprintIconType.icon:
+            blueprintIconsStr.append(f"`{icon.icon}`")
         else:
-            blueprintIconsStr.append(f"{{{icon.value}}}")
+            blueprintIconsStr.append(f"{{{icon.shape.toShapeCode()}}}")
 
     responseParts.append([
         f"Icons : {', '.join(blueprintIconsStr)}"
@@ -765,7 +796,7 @@ def getAccessBPTextAndFiles(
 
 async def accessBlueprintCommandInnerPart(
     interaction:discord.Interaction,
-    getBPCode:typing.Callable[[],typing.Coroutine[typing.Any,typing.Any,tuple[str,bool]]]
+    getBPCode:Callable[[],typing.Coroutine[typing.Any,typing.Any,tuple[str,bool]]]
 ) -> None:
     if exitCommandWithoutResponse(interaction):
         return
@@ -793,7 +824,8 @@ async def accessBlueprintCommandInnerPart(
 
         responseMsg, files = getAccessBPTextAndFiles(decodedBP,toProcessBlueprint,interaction.guild,True)
 
-    responseMsg:str; files:list[discord.File]
+    responseMsg = ""
+    files = []
     await inner()
     await interaction.followup.send(responseMsg,files=files,ephemeral=True) # ephemeral required for button interactions
 
@@ -826,24 +858,37 @@ class BPInfoMessageButtons(discord.ui.View):
 
 async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> None:
 
+    assert interaction.message is not None
     assert interaction.message.type == discord.MessageType.reply
+    assert isinstance(interaction.channel,discord.abc.Messageable)
 
     msgRef = interaction.message.reference
+    assert msgRef is not None
+    assert msgRef.message_id is not None
 
-    if type(msgRef.resolved) == discord.DeletedReferencedMessage:
+    async def notFound() -> None:
+        await interaction.response.send_message("Can't access original message",ephemeral=True)
+
+    if isinstance(msgRef.resolved,discord.DeletedReferencedMessage):
+        await notFound()
         return
 
     if msgRef.resolved is None:
         try:
             message = await interaction.channel.fetch_message(msgRef.message_id)
         except discord.NotFound:
+            await notFound()
             return
     else:
         message = msgRef.resolved
 
     await accessBlueprintCommandFromMessage(interaction,message)
 
-##################################################
+#endregion
+
+
+
+#region events
 
 def runDiscordBot() -> None:
 
@@ -869,7 +914,9 @@ def runDiscordBot() -> None:
     async def on_error(event:str,*args,**kwargs) -> None:
         await globalLogError()
         if event == "on_interaction":
-            await interactionErrorHandler(args[0],sys.exception())
+            curExc = sys.exception()
+            assert curExc is not None
+            await interactionErrorHandler(args[0],curExc)
 
     @client.event
     async def on_message(message:discord.Message) -> None:
@@ -936,6 +983,7 @@ def runDiscordBot() -> None:
         if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 
             # equivalent of a /ping
+            assert client.user is not None
             if client.user.mention in message.content:
                 try:
                     await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
@@ -948,8 +996,9 @@ def runDiscordBot() -> None:
                 bpReactions = detectBPVersion(spz2.blueprints.getPotentialBPCodesInString(msgContent))
                 if bpReactions is not None:
                     for reaction in bpReactions:
-                        if type(reaction) == int:
+                        if isinstance(reaction,int):
                             reaction = client.get_emoji(reaction)
+                            assert reaction is not None
                         try:
                             await message.add_reaction(reaction)
                         except discord.HTTPException:
@@ -965,13 +1014,19 @@ def runDiscordBot() -> None:
         elif action == "accessBP":
             await bpInfoMessageButtonInteraction(interaction)
         else:
+            assert interaction.message is not None
             await globalLogMessage(f"Unknown button action '{action}' for {interaction.message.jump_url}")
 
     @tree.error
-    async def on_error(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
+    async def treeError(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
+        assert error.__cause__ is not None
         await interactionErrorHandler(interaction,error.__cause__)
 
-    # owner only commands
+#endregion
+
+
+
+#region owner commands
 
     @tree.command(name="stop",description=f"{globalInfos.OWNER_ONLY_BADGE} Stops the bot")
     async def stopCommand(interaction:discord.Interaction) -> None:
@@ -1010,7 +1065,11 @@ def runDiscordBot() -> None:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
         await interaction.response.send_message(responseMsg,ephemeral=True)
 
-    # admin only commands
+#endregion
+
+
+
+#region admin commands
 
     class RegisterCommandType:
         SINGLE_CHANNEL = "singleChannel"
@@ -1023,7 +1082,7 @@ def runDiscordBot() -> None:
 
             @tree.command(name=cmdName,description=f"{globalInfos.ADMIN_ONLY_BADGE} {cmdDesc}")
             @discord.app_commands.describe(channel="The channel. Don't provide this parameter to clear it")
-            async def generatedCommand(interaction:discord.Interaction,channel:discord.TextChannel|discord.Thread|None=None) -> None:
+            async def generatedChannelCommand(interaction:discord.Interaction,channel:discord.TextChannel|discord.Thread|None=None) -> None:
                 if exitCommandWithoutResponse(interaction):
                     return
                 if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
@@ -1042,7 +1101,7 @@ def runDiscordBot() -> None:
         elif type_ == RegisterCommandType.BOOL_VALUE:
 
             @tree.command(name=cmdName,description=f"{globalInfos.ADMIN_ONLY_BADGE} {cmdDesc}")
-            async def generatedCommand(interaction:discord.Interaction,value:bool) -> None:
+            async def generatedBoolCommand(interaction:discord.Interaction,value:bool) -> None:
                 if exitCommandWithoutResponse(interaction):
                     return
                 if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
@@ -1056,12 +1115,13 @@ def runDiscordBot() -> None:
 
             @tree.command(name=cmdName,description=f"{globalInfos.ADMIN_ONLY_BADGE} Modifys the '{guildSettingsKey}' list")
             @discord.app_commands.describe(role="Only provide this if using 'add' or 'remove' subcommand")
-            async def generatedCommand(interaction:discord.Interaction,
+            async def generatedRoleCommand(interaction:discord.Interaction,
                 operation:typing.Literal["add","remove","view","clear"],role:discord.Role|None=None) -> None:
                 if exitCommandWithoutResponse(interaction):
                     return
                 if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
 
+                    assert interaction.guild_id is not None
                     roleList = (await guildSettings.getGuildSettings(interaction.guild_id))[guildSettingsKey].copy()
 
                     if (operation in ("add","remove")) and (role is None):
@@ -1163,13 +1223,18 @@ def runDiscordBot() -> None:
                 except OverflowError:
                     responseMsg = "Cooldown value too big"
                 else:
+                    assert interaction.guild_id is not None
                     await guildSettings.setGuildSetting(interaction.guild_id,"usageCooldown",cooldown)
                     responseMsg = f"'usageCooldown' parameter has been set to {cooldown}"
         else:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
         await interaction.response.send_message(responseMsg,ephemeral=True)
 
-    # public commands
+#endregion
+
+
+
+#region public commands
 
     @tree.command(name="view-shapes",description="View shapes, useful if the bot says a shape code is invalid and you want to know why")
     @discord.app_commands.describe(message="The message like you would normally send it")
@@ -1199,7 +1264,8 @@ def runDiscordBot() -> None:
 
         async def runCommand() -> None:
             nonlocal responseMsg, noErrors
-            noErrors = False
+
+            await interaction.response.defer(ephemeral=True)
 
             if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
@@ -1216,10 +1282,16 @@ def runDiscordBot() -> None:
             except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error happened : {e}"
 
-        responseMsg:str; noErrors:bool
+        responseMsg = ""
+        noErrors = False
         await runCommand()
-        await interaction.response.send_message(ephemeral=True,**getCommandResponse(responseMsg,None,interaction.guild,False,
-            ("```","```") if noErrors else ("","")))
+        await interaction.followup.send(**getCommandResponse(
+            responseMsg,
+            None,
+            interaction.guild,
+            False,
+            ("```","```") if noErrors else ("","")
+        ))
 
     @tree.command(name="member-count",description="Display the number of members in this server")
     async def memberCountCommand(interaction:discord.Interaction) -> None:
@@ -1244,9 +1316,11 @@ def runDiscordBot() -> None:
                 responseMsg = "Not in a server"
                 return
 
-            guild = await client.fetch_guild(interaction.guild_id,with_counts=True)
+            guild = await client.fetch_guild(interaction.guild.id,with_counts=True)
             total = guild.approximate_member_count
             online = guild.approximate_presence_count
+            assert total is not None
+            assert online is not None
             offline = total - online
             totalTxt, onlineTxt, offlineTxt = "Total", "Online", "Offline"
             onlineProportion = online / total
@@ -1270,7 +1344,7 @@ def runDiscordBot() -> None:
             responseMsg = "\n".join(lines)
             responseMsg = f"```{responseMsg}```"
 
-        responseMsg:str
+        responseMsg = ""
         await runCommand()
         await interaction.response.send_message(responseMsg,ephemeral=True)
 
@@ -1279,16 +1353,20 @@ def runDiscordBot() -> None:
         public="Errors will be sent publicly if this is True! Sets if the result is sent publicly in the channel",
         see_shape_vars="Whether or not to send the shape codes that were affected to every shape variable",
         spoiler="Whether or not to send the resulting image as spoiler",
-        color_skin="The color skin to use for shapes",
+        color_mode="The color mode to use for shapes",
         max_shape_layers="The maximum number of layers that shapes can have. In-game, 5 in insane and 4 otherwise"
     )
+    @discord.app_commands.choices(color_mode=[
+        discord.app_commands.Choice(name=cm.id,value=cm.id)
+        for cm in spz2.ingameData.DEFAULT_COLOR_SCHEME.colorModes
+    ])
     async def operationGraphCommand(
         interaction:discord.Interaction,
         instructions:str,
         public:bool=False,
         see_shape_vars:bool=False,
         spoiler:bool=False,
-        color_skin:spz2.shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=spz2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
+        color_mode:discord.app_commands.Choice[str]=spz2.ingameData.DEFAULT_COLOR_SCHEME.colorModes[0].id,
         max_shape_layers:int=4
     ) -> None:
         if exitCommandWithoutResponse(interaction):
@@ -1296,7 +1374,6 @@ def runDiscordBot() -> None:
 
         async def runCommand() -> None:
             nonlocal responseMsg, file, imageSize
-            file = None
 
             if not await hasPermission(PermissionLvls.PUBLIC_FEATURE if public else PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
                 await interaction.response.defer(ephemeral=True)
@@ -1314,7 +1391,12 @@ def runDiscordBot() -> None:
                 responseMsg = instructionsOrError
                 return
 
-            valid, responseOrError = operationGraph.genOperationGraph(instructionsOrError,see_shape_vars,color_skin,max_shape_layers)
+            valid, responseOrError = operationGraph.genOperationGraph(
+                instructionsOrError,
+                see_shape_vars,
+                spz2.ingameData.DEFAULT_COLOR_SCHEME.colorModesById[color_mode if isinstance(color_mode,str) else color_mode.value],
+                max_shape_layers
+            )
             if not valid:
                 responseMsg = responseOrError
                 return
@@ -1322,15 +1404,22 @@ def runDiscordBot() -> None:
             (image, imageSize), shapeVarValues = responseOrError
             file = discord.File(image,"graph.png",spoiler=spoiler)
             if see_shape_vars:
-                responseMsg = "\n".join(f"- {k} : {{{v}}}" for k,v in shapeVarValues.items())
+                responseMsg = "\n".join(f"- {k} : {{{v.toShapeCode()}}}" for k,v in shapeVarValues.items())
             else:
                 responseMsg = ""
 
-        file:discord.File; imageSize:int
+        file:discord.File|None = None
+        imageSize = 0
+        responseMsg:str|utils.OutputString = ""
         await runCommand()
         if type(responseMsg) == utils.OutputString:
             responseMsg = responseMsg.render(public)
-        await interaction.followup.send(**getCommandResponse(responseMsg,None if file is None else (file,imageSize),interaction.guild,public))
+        await interaction.followup.send(**getCommandResponse(
+            responseMsg,
+            None if file is None else (file,imageSize),
+            interaction.guild,
+            public
+        ))
 
     @tree.command(name="blueprint-info",description="Get infos about a blueprint")
     @discord.app_commands.describe(
@@ -1350,6 +1439,8 @@ def runDiscordBot() -> None:
         async def runCommand() -> None:
             nonlocal responseMsg
 
+            await interaction.response.defer(ephemeral=True)
+
             if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
                 return
@@ -1367,81 +1458,81 @@ def runDiscordBot() -> None:
 
             responseMsg = getBPInfoText(decodedBP,advanced)
 
-        responseMsg:str
+        responseMsg = ""
         await runCommand()
-        await interaction.response.send_message(ephemeral=True,**getCommandResponse(responseMsg,None,interaction.guild,False))
+        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
 
-    @tree.command(name="research-viewer",description="View the research tree")
-    @discord.app_commands.describe(
-        level="The level to view, starting from 1",
-        node="The node to view, starting from 1. The 'level' parameter must be set to a value",
-        public="Errors will be sent publicly if this is True! Sets if the result is sent publicly in the channel"
-    )
-    async def researchViewerCommand(interaction:discord.Interaction,level:int=0,node:int=0,public:bool=False) -> None:
-        if exitCommandWithoutResponse(interaction):
-            return
+    # @tree.command(name="research-viewer",description="View the research tree")
+    # @discord.app_commands.describe(
+    #     level="The level to view, starting from 1",
+    #     node="The node to view, starting from 1. The 'level' parameter must be set to a value",
+    #     public="Errors will be sent publicly if this is True! Sets if the result is sent publicly in the channel"
+    # )
+    # async def researchViewerCommand(interaction:discord.Interaction,level:int=0,node:int=0,public:bool=False) -> None:
+    #     if exitCommandWithoutResponse(interaction):
+    #         return
 
-        async def runCommand() -> None:
-            nonlocal responseMsg, file, fileSize
-            file = None
+    #     async def runCommand() -> None:
+    #         nonlocal responseMsg, file, fileSize
+    #         file = None
 
-            if not await hasPermission(PermissionLvls.PUBLIC_FEATURE if public else PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
-                await interaction.response.defer(ephemeral=True)
-                responseMsg = globalInfos.NO_PERMISSION_TEXT
-                return
+    #         if not await hasPermission(PermissionLvls.PUBLIC_FEATURE if public else PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
+    #             await interaction.response.defer(ephemeral=True)
+    #             responseMsg = globalInfos.NO_PERMISSION_TEXT
+    #             return
 
-            await interaction.response.defer(ephemeral=not public)
-            if level < 0 or level > len(spz2.research.reserachTree):
-                responseMsg = "Error : invalid level"
-                return
+    #         await interaction.response.defer(ephemeral=not public)
+    #         if level < 0 or level > len(spz2.research.reserachTree):
+    #             responseMsg = "Error : invalid level"
+    #             return
 
-            if node != 0:
+    #         if node != 0:
 
-                if level == 0:
-                    responseMsg = "Error : 'node' parameter provided but not 'level' parameter"
-                    return
+    #             if level == 0:
+    #                 responseMsg = "Error : 'node' parameter provided but not 'level' parameter"
+    #                 return
 
-                curLevel = spz2.research.reserachTree[level-1]
-                if node < 1 or node > len(curLevel.sideGoals)+1:
-                    responseMsg = "Error : invalid node"
-                    return
+    #             curLevel = spz2.research.reserachTree[level-1]
+    #             if node < 1 or node > len(curLevel.sideGoals)+1:
+    #                 responseMsg = "Error : invalid node"
+    #                 return
 
-                file, fileSize = researchViewer.renderNode(level-1,node-1)
-                curNode = curLevel.milestone if node == 1 else curLevel.sideGoals[node-2]
-                desc = utils.decodedFormatToDiscordFormat(utils.decodeUnityFormat(curNode.desc))
-                desc = "\n".join(f"> {l}" for l in desc.split("\n"))
-                if curNode.unlocks == []:
-                    unlocks = "<Nothing>"
-                else:
-                    unlocks = ", ".join(f"`{u}`" for u in curNode.unlocks)
+    #             file, fileSize = researchViewer.renderNode(level-1,node-1)
+    #             curNode = curLevel.milestone if node == 1 else curLevel.sideGoals[node-2]
+    #             desc = utils.decodedFormatToDiscordFormat(utils.decodeUnityFormat(curNode.desc))
+    #             desc = "\n".join(f"> {l}" for l in desc.split("\n"))
+    #             if curNode.unlocks == []:
+    #                 unlocks = "<Nothing>"
+    #             else:
+    #                 unlocks = ", ".join(f"`{u}`" for u in curNode.unlocks)
 
-                lines = [
-                    f"- **Name** : {utils.decodedFormatToDiscordFormat(utils.decodeUnityFormat(curNode.title))}",
-                    f"- **Id** : `{curNode.id}`",
-                    f"- **Description** :\n{desc}",
-                    f"- **Goal Shape** : `{curNode.goalShape}` x{utils.sepInGroupsNumber(curNode.goalAmount)}",
-                    f"- **Unlocks** :\n> {unlocks}",
-                    f"- **Lock/Unlock commands** :",
-                    f"> ```research.set {curNode.id} 0```",
-                    f"> ```research.set {curNode.id} 1```"
-                ]
+    #             lines = [
+    #                 f"- **Name** : {utils.decodedFormatToDiscordFormat(utils.decodeUnityFormat(curNode.title))}",
+    #                 f"- **Id** : `{curNode.id}`",
+    #                 f"- **Description** :\n{desc}",
+    #                 f"- **Goal Shape** : `{curNode.goalShape}` x{utils.sepInGroupsNumber(curNode.goalAmount)}",
+    #                 f"- **Unlocks** :\n> {unlocks}",
+    #                 f"- **Lock/Unlock commands** :",
+    #                 f"> ```research.set {curNode.id} 0```",
+    #                 f"> ```research.set {curNode.id} 1```"
+    #             ]
 
-                responseMsg = "\n".join(lines)
-                return
+    #             responseMsg = "\n".join(lines)
+    #             return
 
-            if level != 0:
-                file, fileSize = researchViewer.renderLevel(level-1)
-                responseMsg = ""
-                return
+    #         if level != 0:
+    #             file, fileSize = researchViewer.renderLevel(level-1)
+    #             responseMsg = ""
+    #             return
 
-            file, fileSize = researchViewer.renderTree()
-            responseMsg = ""
+    #         file, fileSize = researchViewer.renderTree()
+    #         responseMsg = ""
 
-        responseMsg:str; fileSize:int
-        await runCommand()
-        if file is not None:
-            file = discord.File(file,"researchTree.png")
-        await interaction.followup.send(**getCommandResponse(responseMsg,None if file is None else (file,fileSize),interaction.guild,public))
+    #     responseMsg:str; fileSize:int
+    #     await runCommand()
+    #     if file is not None:
+    #         file = discord.File(file,"researchTree.png")
+    #     await interaction.followup.send(**getCommandResponse(responseMsg,None if file is None else (file,fileSize),interaction.guild,public))
 
     @tree.command(name="msg",description="Public by default ! A command for shortcuts to messages")
     @discord.app_commands.describe(
@@ -1492,17 +1583,13 @@ def runDiscordBot() -> None:
             return
 
         async def runCommand() -> None:
-            nonlocal responseMsg, noErrors, to_create
-            noErrors = False
+            nonlocal responseMsg, noErrors
+
+            await interaction.response.defer(ephemeral=True)
 
             if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
                 return
-
-            blueprintInfos:tuple[int,int] = (
-                spz2.versions.LATEST_MAJOR_VERSION,
-                spz2.versions.LATEST_GAME_VERSION
-            )
 
             if to_create.startswith("item-producer-w-"):
 
@@ -1510,42 +1597,42 @@ def runDiscordBot() -> None:
                     responseMsg = "This requires the 'extra' parameter to be set to a value"
                     return
 
-                to_create = to_create.removeprefix("item-producer-w-")
+                errorMsg, result = shapeCodeGenerator.generateShapeCodes(extra)
 
-                shapeCodesOrError, valid = shapeCodeGenerator.generateShapeCodes(extra)
-
-                if not valid:
-                    responseMsg = f"Invalid shape code : {shapeCodesOrError}"
+                if result is None:
+                    responseMsg = f"Invalid shape code : {errorMsg}"
                     return
-                shapeCodes = shapeCodesOrError[0]
+                shapes,_ = result
 
-                shapeCodesLen = len(shapeCodes)
-                if shapeCodesLen != 1:
-                    responseMsg = f"Not exactly one shape code returned ({shapeCodesLen})"
+                shapesLen = len(shapes)
+                if shapesLen != 1:
+                    responseMsg = f"Not exactly one shape returned ({shapesLen})"
                     return
 
-                buildingExtra = {"type":"shape","value":shapeCodes[0]}
+                buildingExtra = spz2.blueprintsExtraData.ItemProducerExtraData(
+                    spz2.blueprintsExtraData.ShapeGenerator(
+                        spz2.blueprintsExtraData.ShapeGeneratorType.shape,
+                        shapes[0]
+                    )
+                )
 
                 try:
                     responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.Blueprint(
-                        *blueprintInfos,
-                        spz2.blueprints.BUILDING_BP_TYPE,
                         spz2.blueprints.BuildingBlueprint([spz2.blueprints.BuildingEntry(
                             spz2.utils.Pos(0,0),
                             spz2.utils.Rotation(0),
-                            spz2.buildings.allBuildings["SandboxItemProducerDefaultInternalVariant"],
+                            spz2.buildings.allBuildingInternalVariants["SandboxItemProducerDefaultInternalVariant"],
                             buildingExtra
-                        )],spz2.blueprints.getDefaultBlueprintIcons(spz2.blueprints.BUILDING_BP_TYPE))
+                        )])
                     ))
                     noErrors = True
                 except spz2.blueprints.BlueprintError as e:
                     responseMsg = f"Error happened while creating blueprint : {e}"
                 return
 
-            to_create = to_create.removeprefix("all-")
-            toCreateBuildings = to_create == "buildings"
+            toCreateBuildings = to_create.removeprefix("all-") == "buildings"
             toPlaceList = (
-                spz2.buildings.allBuildings.values()
+                spz2.buildings.allBuildingInternalVariants.values()
                 if toCreateBuildings else
                 spz2.islands.allIslands.values()
             )
@@ -1560,30 +1647,40 @@ def runDiscordBot() -> None:
                 minZ = min(t.z for t in curTiles)
                 maxX = max(t.x for t in curTiles)
                 curX -= minX
-                shared:tuple[spz2.utils.Pos,spz2.utils.Rotation,spz2.buildings.Building|spz2.islands.Island,None] = (
-                    spz2.utils.Pos(curX,0,-minZ),spz2.utils.Rotation(0),toPlace,None)
-                if toCreateBuildings:
-                    entryList.append(spz2.blueprints.BuildingEntry(*shared))
-                else:
-                    entryList.append(spz2.blueprints.IslandEntry(*shared,None))
+                entryList.append((
+                    spz2.blueprints.BuildingEntry
+                    if toCreateBuildings else
+                    spz2.blueprints.IslandEntry
+                )(
+                    spz2.utils.Pos(curX,0,-minZ),
+                    spz2.utils.Rotation(0),
+                    toPlace
+                ))
                 curX += maxX + 1
 
-            bpType = spz2.blueprints.BUILDING_BP_TYPE if toCreateBuildings else spz2.blueprints.ISLAND_BP_TYPE
             try:
-                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.Blueprint(
-                    *blueprintInfos,
-                    bpType,
-                    (spz2.blueprints.BuildingBlueprint if toCreateBuildings else spz2.blueprints.IslandBlueprint)
-                    (entryList,spz2.blueprints.getDefaultBlueprintIcons(bpType))
+                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.Blueprint((
+                        spz2.blueprints.BuildingBlueprint
+                        if toCreateBuildings else
+                        spz2.blueprints.IslandBlueprint
+                    )(
+                        entryList
+                    )
                 ))
                 noErrors = True
             except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error happened while creating blueprint : {e}"
 
-        responseMsg:str; noErrors:bool
+        responseMsg = ""
+        noErrors = True
         await runCommand()
-        await interaction.response.send_message(ephemeral=True,**getCommandResponse(responseMsg,None,interaction.guild,False,
-            ("```","```") if noErrors else ("","")))
+        await interaction.followup.send(**getCommandResponse(
+            responseMsg,
+            None,
+            interaction.guild,
+            False,
+            ("```","```") if noErrors else ("","")
+        ))
 
     @tree.command(name="access-blueprint",description="Access a blueprint")
     @discord.app_commands.describe(
@@ -1608,6 +1705,10 @@ def runDiscordBot() -> None:
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message):
         await accessBlueprintCommandFromMessage(interaction,message)
 
+#endregion
+
+
+
     try:
         with open(globalInfos.TOKEN_PATH) as f:
             token = f.read()
@@ -1620,7 +1721,15 @@ def runDiscordBot() -> None:
 executedOnReady = False
 globalPaused = False
 msgCommandMessages:dict[str,str]
-antiSpamLastMessages:dict[tuple[int,int],dict[str,str|list[discord.Message]|int|datetime.datetime]] = {}
+class antiSpamLastMessagesType(typing.TypedDict):
+    content:str
+    messages:list[discord.Message]
+    count:int
+    timestamp:datetime.datetime
+antiSpamLastMessages:dict[tuple[int,int],antiSpamLastMessagesType] = {}
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
 msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}
-shapeViewerLastErrors:dict[int,dict[str,int|datetime.datetime]] = {}
+class shapeViewerLastErrorsType(typing.TypedDict):
+    count:int
+    timestamp:datetime.datetime
+shapeViewerLastErrors:dict[int,shapeViewerLastErrorsType] = {}

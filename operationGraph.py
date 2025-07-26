@@ -1,11 +1,12 @@
-import shapez2
-from shapez2 import pygamePIL, shapeOperations
 import shapeCodeGenerator
 import globalInfos
 import utils
 from utils import OutputString
+
+import shapez2
+from shapez2 import pygamePIL, shapeOperations, gameObjects
 import io
-import typing
+from collections.abc import Callable
 
 class Operation:
 
@@ -14,7 +15,7 @@ class Operation:
         numInputs:int,
         numOutputs:int,
         fullName:str,
-        func:typing.Callable[...,list[shapeOperations.Shape]],
+        func:Callable[...,list[gameObjects.Shape]],
         colorInputIndexes:list[int]|None=None
     ) -> None:
         self.numInputs = numInputs
@@ -34,18 +35,18 @@ class Instruction:
         type:str,
         *,
         shapeVars:list[int]|None=None,
-        shapeCodes:list[str]|None=None,
-        shapeConfig:str|None=None,
+        shapes:list[gameObjects.Shape]|None=None,
+        shapesConfig:gameObjects.ShapesConfiguration|None=None,
         inputShapeVars:list[int]|None=None,
-        inputColorVars:list[str]|None=None,
+        inputColorVars:list[gameObjects.Color]|None=None,
         operation:Operation|None=None,
         outputShapeVars:list[int]|None=None
     ) -> None:
         self.type = type
         if type == Instruction.DEF:
             self.vars = shapeVars
-            self.shapeCodes = shapeCodes
-            self.shapeConfig = shapeConfig
+            self.shapes = shapes
+            self.shapesConfig = shapesConfig
         else:
             self.inputs = inputShapeVars
             self.colorInputs = inputColorVars
@@ -65,17 +66,17 @@ class GraphNode:
         image:pygamePIL.Surface,
         *,
         shapeVar:int|None=None,
-        shapeCode:str|None=None,
-        shapeConfig:str|None=None,
-        colorInputs:list[str]|None=None
+        shape:gameObjects.Shape|None=None,
+        shapesConfig:gameObjects.ShapesConfiguration|None=None,
+        colorInputs:list[gameObjects.Color]|None=None
     ) -> None:
         self.type = type
         self.inputs = inputs
         self.outputs = outputs
         self.image = image
         self.shapeVar = shapeVar
-        self.shapeCode = shapeCode
-        self.shapeConfig = shapeConfig
+        self.shape = shape
+        self.shapesConfig = shapesConfig
         self.colorInputs = colorInputs
         self.layer = None
         self.pos = None
@@ -143,15 +144,15 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
                     return False,OutputString("Shape variable ",OutputString.Number(i,True)," can't be negative")
                 shapeVarsInt.append(curVar)
 
-            shapeCodesOrError, isShapeCodeValid = shapeCodeGenerator.generateShapeCodes(shapeCode)
-            if not isShapeCodeValid:
-                return False,OutputString("Error while decoding shape code : ",OutputString.UnsafeString(shapeCodesOrError))
-            shapeCodes,shapeConfig = shapeCodesOrError
+            errorMsg, result = shapeCodeGenerator.generateShapeCodes(shapeCode)
+            if result is None:
+                return False,OutputString("Error while decoding shape code : ",OutputString.UnsafeString(errorMsg))
+            shapes, shapesConfig = result
 
-            if len(shapeCodes) != len(shapeVarsInt):
-                return False,f"Number of shape codes outputed isn't the same as number of shape variables given ({len(shapeCodes)} vs {len(shapeVarsInt)})"
+            if len(shapes) != len(shapeVarsInt):
+                return False,f"Number of shapes outputed isn't the same as number of shape variables given ({len(shapes)} vs {len(shapeVarsInt)})"
 
-            return True,Instruction(Instruction.DEF,shapeVars=shapeVarsInt,shapeCodes=shapeCodes,shapeConfig=shapeConfig)
+            return True,Instruction(Instruction.DEF,shapeVars=shapeVarsInt,shapes=shapes,shapesConfig=shapesConfig)
 
         if instruction.count(OPERATION_SEPARATOR) != 2:
             return False,f"Operation instruction must contain 2 '{OPERATION_SEPARATOR}'"
@@ -175,9 +176,9 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
 
         for i,input in enumerate(inputs):
             if i in curOperation.colorInputindexes:
-                if input not in shapez2.gameData.SHAPE_COLORS:
+                if input not in [c.code for c in shapez2.ingameData.DEFAULT_COLOR_SCHEME.colors]:
                     return False,OutputString("Input ",OutputString.Number(i,True)," must be a color")
-                colorInputs.append(input)
+                colorInputs.append(shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorsByCode[input])
             else:
                 try:
                     curVar = int(input)
@@ -200,8 +201,13 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
             if e != g:
                 return False,f"Number of operation {t} isn't the same as number of {t} given ({e} vs {g})"
 
-        return True,Instruction(Instruction.OP,inputShapeVars=inputsInt,inputColorVars=colorInputs,
-            operation=curOperation,outputShapeVars=outputsInt)
+        return True,Instruction(
+            Instruction.OP,
+            inputShapeVars=inputsInt,
+            inputColorVars=colorInputs,
+            operation=curOperation,
+            outputShapeVars=outputsInt
+        )
 
     if text == "":
         return False,"Empty text"
@@ -220,9 +226,9 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
 def genOperationGraph(
     instructions:list[Instruction],
     showShapeVars:bool,
-    colorSkin:shapez2.shapeViewer.EXTERNAL_COLOR_SKINS_ANNOTATION=shapez2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
+    colorMode:shapez2.gameObjects.ColorMode=shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorModes[0],
     maxShapeLayers:int=4
-) -> tuple[bool,str|OutputString|tuple[tuple[io.BytesIO,int],dict[int,str]]]:
+) -> tuple[bool,str|OutputString|tuple[tuple[io.BytesIO,int],dict[int,gameObjects.Shape]]]:
 
     seenInputVars = []
     seenOutputVars = []
@@ -261,8 +267,13 @@ def genOperationGraph(
         if instruction.type == Instruction.OP:
             newInstructions.append(instruction)
             continue
-        for var,code in zip(instruction.vars,instruction.shapeCodes):
-            newInstructions.append(Instruction(Instruction.DEF,shapeVars=[var],shapeCodes=[code],shapeConfig=instruction.shapeConfig))
+        for var,shape in zip(instruction.vars,instruction.shapes):
+            newInstructions.append(Instruction(
+                Instruction.DEF,
+                shapeVars=[var],
+                shapes=[shape],
+                shapesConfig=instruction.shapesConfig
+            ))
 
     instructions = newInstructions.copy()
 
@@ -283,8 +294,8 @@ def genOperationGraph(
     handledInstructions = {}
     wasProcessingInstructionIndex:int
 
-    def renderShape(shapeCode:str,shapeConfig:str) -> pygamePIL.Surface:
-        return shapez2.shapeViewer.renderShape(shapeCode,GRAPH_NODE_SIZE,colorSkin,shapeConfig)
+    def renderShape(shape:gameObjects.Shape,shapesConfig:gameObjects.ShapesConfiguration) -> pygamePIL.Surface:
+        return shapez2.shapeViewer.renderShape(shape,GRAPH_NODE_SIZE,colorMode,shapesConfig)
 
     def newId() -> int:
         nonlocal curId
@@ -294,10 +305,22 @@ def genOperationGraph(
     def genGraphNode(instruction:Instruction,instructionIndex:int) -> int:
         nonlocal wasProcessingInstructionIndex
 
-        def createFinalOutputShape(inputs:list[int],shapeCode:str,shapeVar:int,shapeConfig:str) -> int:
+        def createFinalOutputShape(
+            inputs:list[int],
+            shape:gameObjects.Shape,
+            shapeVar:int,
+            shapesConfig:gameObjects.ShapesConfiguration
+        ) -> int:
             curId = newId()
-            graphNodes[curId] = GraphNode(GraphNode.SHAPE,inputs,None,renderShape(shapeCode,shapeConfig),
-                shapeVar=shapeVar,shapeCode=shapeCode,shapeConfig=shapeConfig)
+            graphNodes[curId] = GraphNode(
+                GraphNode.SHAPE,
+                inputs,
+                None,
+                renderShape(shape,shapesConfig),
+                shapeVar=shapeVar,
+                shape=shape,
+                shapesConfig=shapesConfig
+            )
             return curId
 
         if instructionIndex in handledInstructions:
@@ -306,17 +329,24 @@ def genOperationGraph(
         if instruction.type == Instruction.DEF:
 
             curShapeVar = instruction.vars[0]
-            curShapeCode = instruction.shapeCodes[0]
-            curShapeConfig = instruction.shapeConfig
+            curShape = instruction.shapes[0]
+            curShapesConfig = instruction.shapesConfig
 
             curId = newId()
-            graphNodes[curId] = GraphNode(GraphNode.SHAPE,None,None,renderShape(curShapeCode,curShapeConfig),
-                shapeVar=curShapeVar,shapeCode=curShapeCode,shapeConfig=curShapeConfig)
+            graphNodes[curId] = GraphNode(
+                GraphNode.SHAPE,
+                None,
+                None,
+                renderShape(curShape,curShapesConfig),
+                shapeVar=curShapeVar,
+                shape=curShape,
+                shapesConfig=curShapesConfig
+            )
             handledInstructions[instructionIndex] = curId
 
             connectedInstructionLocation = inputLocations.get(curShapeVar)
             if connectedInstructionLocation is None:
-                connectedNodeId = createFinalOutputShape([],curShapeCode,curShapeVar,curShapeConfig)
+                connectedNodeId = createFinalOutputShape([],curShape,curShapeVar,curShapesConfig)
             else:
                 connectedNodeId = genGraphNode(instructions[connectedInstructionLocation],connectedInstructionLocation)
 
@@ -325,8 +355,8 @@ def genOperationGraph(
             return curId
 
         connectedInputs = []
-        inputShapeCodes = []
-        inputShapeConfigs = []
+        inputShapes = []
+        inputShapesConfigs = []
 
         curCurId = newId()
         graphNodes[curCurId] = GraphNode(GraphNode.OP,[],[],instruction.op.image,colorInputs=instruction.colorInputs)
@@ -346,37 +376,43 @@ def genOperationGraph(
                         break
 
             connectedInputs.append(connectedInput)
-            inputShapeCodes.append(graphNodes[connectedInput].shapeCode)
-            inputShapeConfigs.append(graphNodes[connectedInput].shapeConfig)
+            inputShapes.append(graphNodes[connectedInput].shape)
+            inputShapesConfigs.append(graphNodes[connectedInput].shapesConfig)
 
         wasProcessingInstructionIndex = instructionIndex
 
-        for inputShapeConfig in inputShapeConfigs[1:]:
-            if inputShapeConfig != inputShapeConfigs[0]:
+        for inputShapesConfig in inputShapesConfigs[1:]:
+            if inputShapesConfig != inputShapesConfigs[0]:
                 raise shapeOperations.InvalidOperationInputs(
-                    f"Differing input shape configurations (quad/hex) aren't supported in '{instruction.op.fullName}' operation"
+                    f"Differing input shapes configurations (quad/hex) aren't supported in '{instruction.op.fullName}' operation"
                 )
-        curShapeConfig = inputShapeConfigs[0]
+        curShapesConfig = inputShapesConfigs[0]
 
         graphNodes[curCurId].inputs.extend(connectedInputs)
 
-        outputShapeCodes = instruction.op.func(
-            *[shapeOperations.Shape.fromShapeCode(s) for s in inputShapeCodes],
+        outputShapes = instruction.op.func(
+            *inputShapes,
             *instruction.colorInputs,
-            config=shapeOperations.ShapeOperationConfig(maxShapeLayers)
+            config=shapeOperations.ShapeOperationConfig(maxShapeLayers,curShapesConfig)
         )
-        outputShapeCodes = [s.toShapeCode() for s in outputShapeCodes]
 
         toGenOutputs = []
 
-        for output,outputShapeCode in zip(instruction.outputs,outputShapeCodes):
+        for output,outputShape in zip(instruction.outputs,outputShapes):
             outputLocation = inputLocations.get(output)
             if outputLocation is None:
-                graphNodes[curCurId].outputs.append(createFinalOutputShape([curCurId],outputShapeCode,output,curShapeConfig))
+                graphNodes[curCurId].outputs.append(createFinalOutputShape([curCurId],outputShape,output,curShapesConfig))
             else:
                 curId = newId()
-                graphNodes[curId] = GraphNode(GraphNode.SHAPE,[curCurId],None,renderShape(outputShapeCode,curShapeConfig),
-                    shapeVar=output,shapeCode=outputShapeCode,shapeConfig=curShapeConfig)
+                graphNodes[curId] = GraphNode(
+                    GraphNode.SHAPE,
+                    [curCurId],
+                    None,
+                    renderShape(outputShape,curShapesConfig),
+                    shapeVar=output,
+                    shape=outputShape,
+                    shapesConfig=curShapesConfig
+                )
                 graphNodes[curCurId].outputs.append(curId)
                 toGenOutputs.append((curId,outputLocation))
         for cid,ol in toGenOutputs:
@@ -424,8 +460,10 @@ def genOperationGraph(
         layerLen = len(layer)
         layerWidth = (layerLen*GRAPH_NODE_SIZE)+((layerLen-1)*GRAPH_H_MARGIN)
         for nodeIndex,node in enumerate(layer.values()):
-            node.pos = (((graphWidth-layerWidth)/2)+(nodeIndex*(GRAPH_NODE_SIZE+GRAPH_H_MARGIN)),
-                layerIndex*(GRAPH_NODE_SIZE+GRAPH_V_MARGIN))
+            node.pos = (
+                ((graphWidth-layerWidth)/2)+(nodeIndex*(GRAPH_NODE_SIZE+GRAPH_H_MARGIN)),
+                layerIndex*(GRAPH_NODE_SIZE+GRAPH_V_MARGIN)
+            )
 
     graphSurface = pygamePIL.Surface((graphWidth,graphHeight),pygamePIL.SRCALPHA)
 
@@ -433,9 +471,13 @@ def genOperationGraph(
         if node.outputs is not None:
             for output in node.outputs:
                 outputPos = graphNodes[output].pos
-                pygamePIL.draw_line(graphSurface,LINE_COLOR,
+                pygamePIL.draw_line(
+                    graphSurface,
+                    LINE_COLOR,
                     (node.pos[0]+(GRAPH_NODE_SIZE/2),node.pos[1]+GRAPH_NODE_SIZE),
-                    (outputPos[0]+(GRAPH_NODE_SIZE/2),outputPos[1]),LINE_WIDTH)
+                    (outputPos[0]+(GRAPH_NODE_SIZE/2),outputPos[1]),
+                    LINE_WIDTH
+                )
 
     shapeVarValues = {}
 
@@ -448,18 +490,20 @@ def genOperationGraph(
             curImagePos = node.pos
         graphSurface.blit(curImage,curImagePos)
         if node.type == GraphNode.SHAPE:
-            shapeVarValues[node.shapeVar] = node.shapeCode
+            shapeVarValues[node.shapeVar] = node.shape
             if showShapeVars:
                 varText = SHAPE_VAR_FONT.render(str(node.shapeVar),1,SHAPE_VAR_COLOR)
-                graphSurface.blit(varText,(node.pos[0]+GRAPH_NODE_SIZE-varText.get_width(),
-                    node.pos[1]+GRAPH_NODE_SIZE-varText.get_height()))
+                graphSurface.blit(varText,(
+                    node.pos[0]+GRAPH_NODE_SIZE-varText.get_width(),
+                    node.pos[1]+GRAPH_NODE_SIZE-varText.get_height()
+                ))
         else:
             if len(node.colorInputs) != 0:
                 curColorInputHeight = GRAPH_NODE_SIZE / len(node.colorInputs)
                 for colorIndex,color in enumerate(node.colorInputs):
                     pygamePIL.draw_rect(
                         graphSurface,
-                        shapez2.shapeViewer.getShapeColor(color,colorSkin),
+                        colorMode.colorSkin.colors[color],
                         pygamePIL.Rect(
                             node.pos[0] + GRAPH_NODE_SIZE - NODE_COLOR_INPUT_WIDTH,
                             node.pos[1] + (curColorInputHeight*colorIndex),

@@ -1,3 +1,18 @@
+## 26 Jul 25
+- Update for shapez2 library v1.0.0
+- Remove /msg global-signal-channel
+- Add response message to blueprint info button if the message isn't accessible
+- Increase antispam cooldown between messages to 30s
+- Defer interaction responses in blueprint related commands
+- Change `typing.Callable` to `collections.abc.Callable`
+- Clean up `responses` module :
+  - Rename module to `shapeViewerWrapper`
+  - Rename `handleResponse()` to `renderShapes()`
+  - Change `renderShapes()` output to a `typing.TypedDict`
+- Guess shapes config in shape code generator when `+hex` parameter isn't present
+- Add hard milestone 8 shape auto message
+- Misc changes to reduce the number of type checker errors
+
 ## 24 Jun 25
 - Move parts of the code that aren't specific to the bot to its own library : https://pypi.org/project/shapez2/
 

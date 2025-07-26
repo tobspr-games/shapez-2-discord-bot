@@ -5,7 +5,7 @@ The /operation-graph command allows you to generate a graph of multiple shape tr
 ## Syntax
 
 /operation-graph [instructions]\
-Optional parameters : [public] [see_shape_vars] [spoiler] [color_skin] [max_shape_layers]
+Optional parameters : [public] [see_shape_vars] [spoiler] [color_mode] [max_shape_layers]
 
 ## Shape variables
 
@@ -73,5 +73,5 @@ Examples : `1:r90cw:2`, `3,7:stack:5`, `10,15:swap:4,21`, `6,r:paint:11`
 - `public` (default : false) : When true, the resulting graph will be sent publicly in the channel the command was executed in. Error messages will also be sent publicly if this parameter is set to true.
 - `see_shape_vars` (default : false) : For every shape on the graph, the corresponding shape variable number will be displayed and the shape code associated with every shape variable will be sent via text.
 - `spoiler` (default : false) : Whether or not to mark the resulting image as spoiler
-- `color_skin` (default : RGB) : Which color skin to use to render shapes
+- `color_mode` (default : RGB) : Which color mode to use to render shapes
 - `max_shape_layers` (default : 4) : The maximum number of layers that shapes can have. Affects the `stack` and `pin` operations.

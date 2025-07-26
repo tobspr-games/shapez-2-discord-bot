@@ -1,7 +1,9 @@
 import shapeCodeGenerator
-import shapez2
 import globalInfos
 import utils
+
+import shapez2
+from shapez2 import gameObjects
 import io
 import typing
 
@@ -26,7 +28,7 @@ class DisplayParam:
             self.strAllowedValues:list[str] = strAllowedValues
             self.strCaseMatters:bool = strCaseMatters
 
-    def getValidValue(self,inputValue:tuple[str]|tuple[str,str]) -> bool|int|None:
+    def getValidValue(self,inputValue:tuple[str]|tuple[str,str]) -> bool|int|str|None:
         if self.type == "bool":
             return True
         if len(inputValue) < 2:
@@ -60,35 +62,51 @@ DISPLAY_PARAMS:dict[str,DisplayParam] = {
     "3d" : DisplayParam("bool",False),
     "colors" : DisplayParam(
         "str",
-        shapez2.shapeViewer.EXTERNAL_COLOR_SKINS[0],
-        strAllowedValues=shapez2.shapeViewer.EXTERNAL_COLOR_SKINS,
+        shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorModes[0].id,
+        strAllowedValues=[cm.id for cm in shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorModes],
         strCaseMatters=False
     )
 }
 
-def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],bool,None|list[str],None|list[str]],bool,list[str]]:
+class RenderOutput(typing.TypedDict):
+    errorMsgs:list[str]
+    hasPotentialShapeCodes:bool
+    finalImage:tuple[io.BytesIO,int]|None
+    spoiler:bool
+    shapeCodes:list[str]|None
+    viewer3dLinks:list[str]|None
+
+def renderShapes(message:str) -> RenderOutput:
+
+    output:RenderOutput = {
+        "errorMsgs" : [],
+        "hasPotentialShapeCodes" : False,
+        "finalImage" : None,
+        "spoiler" : False,
+        "shapeCodes" : None,
+        "viewer3dLinks" : None
+    }
 
     potentialShapeCodes = shapeCodeGenerator.getPotentialShapeCodesFromMessage(message)
 
     if potentialShapeCodes == []:
-        return
+        output["errorMsgs"].append("No potential shape codes detected")
+        return output
 
-    shapeCodes:list[tuple[str,str]] = []
-    hasAtLeastOneInvalidShapeCode = False
-    errorMsgs = []
+    output["hasPotentialShapeCodes"] = True
+    shapes:list[tuple[gameObjects.Shape,gameObjects.ShapesConfiguration]] = []
 
     for i,code in enumerate(potentialShapeCodes):
-        shapeCodesOrError, isShapeCodeValid = shapeCodeGenerator.generateShapeCodes(code)
-        if isShapeCodeValid:
-            shapeCodes.extend((shape,shapeCodesOrError[1]) for shape in shapeCodesOrError[0])
+        errorMsg, result = shapeCodeGenerator.generateShapeCodes(code)
+        if result is None:
+            output["errorMsgs"].append(f"Invalid shape code for shape {i+1} : {errorMsg}")
         else:
-            errorMsgs.append(f"Invalid shape code for shape {i+1} : {shapeCodesOrError}")
-            hasAtLeastOneInvalidShapeCode = True
+            shapes.extend((shape,result[1]) for shape in result[0])
 
-    if shapeCodes == []:
-        if hasAtLeastOneInvalidShapeCode:
-            return None,hasAtLeastOneInvalidShapeCode,errorMsgs
-        return None,True,["No non-empty shapes generated"]
+    if shapes == []:
+        if output["errorMsgs"] == []:
+            output["errorMsgs"].append("No non-empty shapes generated")
+        return output
 
     potentialDisplayParams = shapeCodeGenerator.getPotentialDisplayParamsFromMessage(message)
     curDisplayParams = {k:v.default for k,v in DISPLAY_PARAMS.items()}
@@ -99,40 +117,39 @@ def handleResponse(message:str) -> None|tuple[None|tuple[tuple[io.BytesIO,int],b
             if tempValue is not None:
                 curDisplayParams[param[0]] = tempValue
 
+    output["spoiler"] = curDisplayParams["spoiler"]
+    if curDisplayParams["result"]:
+        output["shapeCodes"] = [s[0].toShapeCode() for s in shapes]
+
     curDisplayParams["colors"] = curDisplayParams["colors"].upper()
     if curDisplayParams["colors"].endswith("-CB"):
         curDisplayParams["colors"] = curDisplayParams["colors"].removesuffix("-CB") + "-cb"
+    curColorMode = shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorModesById[curDisplayParams["colors"]]
 
-    numShapes = len(shapeCodes)
+    numShapes = len(shapes)
     size = curDisplayParams["size"]
     finalImage = shapez2.pygamePIL.Surface(
         (size*min(globalInfos.SHAPES_PER_ROW,numShapes),size*(((numShapes-1)//globalInfos.SHAPES_PER_ROW)+1)),
-        shapez2.pygamePIL.SRCALPHA)
+        shapez2.pygamePIL.SRCALPHA
+    )
 
     renderedShapesCache = {}
-    for i,code in enumerate(shapeCodes):
-        if renderedShapesCache.get(code) is None:
-            renderedShapesCache[code] = shapez2.shapeViewer.renderShape(code[0],size,curDisplayParams["colors"],code[1])
+    for i,shape in enumerate(shapes):
+        if renderedShapesCache.get(shape) is None:
+            renderedShapesCache[shape] = shapez2.shapeViewer.renderShape(shape[0],size,curColorMode,shape[1])
         divMod = divmod(i,globalInfos.SHAPES_PER_ROW)
-        finalImage.blit(renderedShapesCache[code],(size*divMod[1],size*divMod[0]))
+        finalImage.blit(renderedShapesCache[shape],(size*divMod[1],size*divMod[0]))
 
-    viewer3dLinks = None
+    output["finalImage"] = utils.pygameSurfToBytes(finalImage)
+
     if curDisplayParams["3d"]:
-        viewer3dLinks = []
-        for code,_ in shapeCodes:
-            linkSafeCode = code
+        output["viewer3dLinks"] = []
+        for shape,_ in shapes:
+            shapeCode = shape.toShapeCode()
+            linkSafeCode = shapeCode
             for old,new in globalInfos.LINK_CHAR_REPLACEMENT.items():
                 linkSafeCode = linkSafeCode.replace(old,new)
-            link = f"[{code}](<{globalInfos.SHAPE_3D_VIEWER_LINK_START}{linkSafeCode}>)"
-            viewer3dLinks.append(link)
+            link = f"[{shapeCode}](<{globalInfos.SHAPE_3D_VIEWER_LINK_START}{linkSafeCode}>)"
+            output["viewer3dLinks"].append(link)
 
-    return (
-        (
-            utils.pygameSurfToBytes(finalImage),
-            curDisplayParams["spoiler"],
-            [s[0] for s in shapeCodes] if curDisplayParams["result"] else None,
-            viewer3dLinks
-        ),
-        hasAtLeastOneInvalidShapeCode,
-        errorMsgs
-    )
+    return output

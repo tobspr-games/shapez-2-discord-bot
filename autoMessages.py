@@ -1,4 +1,5 @@
 import globalInfos
+
 import discord
 import shapez2
 import io
@@ -65,6 +66,16 @@ async def _debugMenuCheck(message:discord.Message) -> str|None:
 
     return None
 
+def _hardMilestone8Check(message:discord.Message) -> str|None:
+    if "P-CcRcCc" not in message.content:
+        return None
+    return "".join([
+        "Your message contains a shape that requires standalone pins, ",
+        "you can find hints and solutions in <https://shapez2.wiki.gg/wiki/Shape_Patterns#Standalone_Pins>. ",
+        "You can also find a visual representation of it in ",
+        "https://discord.com/channels/1000343719314198548/1248891331615526962/1275509416996900905"
+    ])
+
 async def checkMessage(message:discord.Message) -> list[str]:
 
     messages = []
@@ -72,5 +83,9 @@ async def checkMessage(message:discord.Message) -> list[str]:
     debugMenuCheckResult = await _debugMenuCheck(message)
     if debugMenuCheckResult is not None:
         messages.append(debugMenuCheckResult)
+
+    hardMilestone8CheckResult = _hardMilestone8Check(message)
+    if hardMilestone8CheckResult is not None:
+        messages.append(hardMilestone8CheckResult)
 
     return messages

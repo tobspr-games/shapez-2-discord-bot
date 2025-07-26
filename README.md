@@ -39,21 +39,24 @@ Put your shape code and parameters in `{}`
 Each parameter must have a `+` in front of it
 
 - +struct : Use `0` and `1` in your shape code and they will be replaced by nothing or a circle with the color depending on the layer
-- +fill : For each layer, if it contains 1 quadrant, that quadrant will be repeated 4 times, if 2 quadrants, they will be repeated 2 times
+- +fill :
+  - If using quad shapes, for each layer : if it contains 1 quadrant -> that quadrant will be repeated 4 times, if 2 quadrants -> they will be repeated 2 times
+  - If using hex shapes : 1 quadrant -> repeated 6 times, 2 -> 3, 3 -> 2
 - +lfill : Same as `fill` but with layers instead of quadrants
 - +cut : Will cut the shape in half and show the two resulting shapes
 - +qcut : Same as `cut` but will cut the shape in 4 instead of 2
 - +lsep : Will separate each layer of the shape
-- +hex : Indicates that the shape is in hexagonal mode, changing which shape types are considered valid and changing the behavior of +fill to 1 quadrant -> repeated 6 times, 2 -> 3, 3 -> 2
+- +hex : Forces the shapes configuration to be hexagonal shapes, useful if the shape only contains shape parts common to quad and hex
 
 Note : `cut` and `qcut` are mutually exclusive
 
 ### Additional features
 
 - Shape expansion : Colorable shapes (like `C`) not followed by a color will have `u` appended (`Cu`), uncolorable shapes (like `P` or `-`) not followed by `-` will have `-` appended (`P-` or `--`)
+- Shapes configuration guess : If the `+hex` parameter isn't present, the current shapes configuration (quad/hex) will be guessed based on the shape types given in the shape code
 
 No matter in which order you put your parameters in your shape code, they will be executed in the following order :\
-hex, lfill, struct, shape expansion, fill, lsep, cut/qcut
+lfill, shapes config guess, struct, shape expansion, fill, lsep, cut/qcut
 
 ### Display parameters
 
@@ -63,7 +66,7 @@ Display parameters must be put outside of the `{}`, have a `/` in front of them 
 - /spoiler : Will mark the resulting image as spoiler
 - /result : Will additionally send the generated shape codes
 - /3d : Will additionally send links to [DontMash's 3D shape viewer](https://shapez.soren.codes/shape)
-- /colors : Will control the color skin used for shapes (default:RGB, available:RGB,RYB,CMYK,RGB-cb)
+- /colors : Will control the color mode used for shapes (default:RGB, available:RGB,RYB,CMYK,RGB-cb)
 
 Note : shapes with more than 4 layers and/or with more/less than 4 quadrants per layer are supported
 
@@ -83,11 +86,11 @@ If you have the blueprint code as text, paste it in the 'blueprint' parameter. I
 
 - /member-count : Displays the member count of the server it is executed in (with additional info such as online/offline count and percentage)
 
-- /operation-graph [instructions] [public=False] [see_shape_vars=False] [spoiler=False] [color_skin=RGB] [max_shape_layers=4] : See the [/operation-graph documentation](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/operationGraphDoc.md)
+- /operation-graph [instructions] [public=False] [see_shape_vars=False] [spoiler=False] [color_mode=RGB] [max_shape_layers=4] : See the [/operation-graph documentation](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/operationGraphDoc.md)
 
 - /blueprint-info [blueprint] [advanced=False] [blueprint_file=None] : Will give the version, type, blueprint cost, platform unit cost, building count, building scale size, building tile count, platform count, platform scale size, platform tile count and icons of the given blueprint. If 'advanced' is set to True, will also give the individual counts for every building and platforms
 
-- /research-viewer [level=0] [node=0] [public=False] : Without the 'level' or 'node' parameters set, displays the entire research tree. With the 'level' parameter set to a number starting from 1, displays the corresponding level (milestone + side goals). With the 'level' and 'node' parameter set to a number starting from 1, displays the corresponding node of the corresponding level (1 for the milestone then starting from 2 for the side goals). If 'public' is set to true, the result will be sent publicly in the channel the command was executed in. Error messages will also be sent publicly if this parameter is set to true. When viewing a single node, will display via text the node's name, id, description, goal shape, goal amount, unlocks, lock/unlock commands. Note : the version of the research tree is included in the bottom left of the images created by this command. Important note : the research tree is the one of alpha15.2-wiretest1, updated version comming soon™
+- /research-viewer : Will come back soon™
 
 - /msg [msg] [public=True] : A command for shortcuts to messages. Enter the message id in the 'msg' parameter. The 'public' parameter will determine if the message will be sent publicly in the channel the command was executed in or not ('True' by default !)
 
@@ -147,6 +150,7 @@ Important note : guild settings currently can't be modified so most of the comma
 - If the bot is mentioned, it should react with `:robot:`
 - If one (and only one) blueprint code is detected in a message and its attached files, the bot will send a message containing part of the /access-blueprint command response if the message is in a blueprints channel or one of its threads, otherwise it will react with the version of that blueprint
 - If a message contains one attachment and it's a screenshot containing the debug menu, the bot will send a message informing how to close that menu
+- If a message contains the hard milestone 8 first shape code, the bot will send a message informing how to create standalone pins
 - Port of sbe's antispam : if a user sends 4 times in a row the same message in the same server at max 10 seconds interval, the bot will time them out for an hour and the messages in question will be deleted
 
 [Changelog](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/changelog.md)
