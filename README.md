@@ -76,19 +76,19 @@ Note : as a general rule, slash commands will always send private responses exce
 
 #### Inputting a blueprint code in a command:
 
-If you have the blueprint code as text, paste it in the 'blueprint' parameter. If you have a `txt` or `spz2bp` file, upload it using the 'blueprint_file' parameter. Pro tip : if you have a blueprint code as text that is longer than 6000 characters, click the 'blueprint_file' parameter but instead of clicking the 'upload file' button, paste in the blueprint code text to convert it to a `txt` file. Note : if you provide a file and the 'blueprint' parameter is required, fill it in with dummy characters.
+If you have the blueprint code as text, select the 'blueprint' parameter and paste it there. If you have a `.txt` or `.spz2bp` file, upload it using the 'blueprint_file' parameter. Pro tip : if you have a blueprint code as text that is longer than 6000 characters, click the 'blueprint_file' parameter but instead of clicking the 'upload file' button, paste in the blueprint code text to convert it to a `.txt` file.
 
 ### Public commands
 
 - /view-shapes [message] : Will trigger the shape viewer like a regular message but will send the response back only to you and will also include any error messages
 
-- /update-blueprint [blueprint] [blueprint_file=None] : Updates a blueprint to the latest format. Runs the same migration code as ingame as well as some additional convertions.
+- /update-blueprint [blueprint=None] [blueprint_file=None] : Updates a blueprint to the latest format. Runs the same migration code as ingame as well as some additional convertions.
 
 - /member-count : Displays the member count of the server it is executed in (with additional info such as online/offline count and percentage)
 
 - /operation-graph [instructions] [public=False] [see_shape_vars=False] [spoiler=False] [color_mode=RGB] [max_shape_layers=4] : See the [/operation-graph documentation](https://github.com/tobspr-games/shapez-2-discord-bot/blob/main/operationGraphDoc.md)
 
-- /blueprint-info [blueprint] [advanced=False] [blueprint_file=None] : Will give the version, type, blueprint cost, platform unit cost, building count, building scale size, building tile count, platform count, platform scale size, platform tile count and icons of the given blueprint. If 'advanced' is set to True, will also give the individual counts for every building and platforms
+- /blueprint-info [blueprint=None] [blueprint_file=None] [advanced=False] : Will give the version, type, blueprint cost, platform unit cost, building count, building scale size, building tile count, platform count, platform scale size, platform tile count and icons of the given blueprint. If 'advanced' is set to True, will also give the individual counts for every building and platforms
 
 - /research-viewer : Will come back soon™
 
@@ -99,7 +99,7 @@ If you have the blueprint code as text, paste it in the 'blueprint' parameter. I
   - all-buildings : Will create a blueprint containing all buildings, starting at X=0 and increasing (Y=0 for all, Z is 0 or increased so no building tiles are below 0). Note : this is intended for testing external blueprint related tools, pasting the blueprint ingame will result in errors and not placed buildings
   - all-platforms : Same as above except with platforms instead of buildings
 
-- /access-blueprint [blueprint] [blueprint_file=None] : Access a blueprint. To input a blueprint, use the 'blueprint' or 'blueprint_file' parameters or right click a message and select the 'access-blueprint' app command. The response will include blueprint infos like in /blueprint-info with 'advanced' set to false, a link to view the blueprint in [DontMash's 3D blueprint viewer](https://shapez.soren.codes/blueprint), as well as `txt` and `spz2bp` files containing the blueprint
+- /access-blueprint [blueprint=None] [blueprint_file=None] : Access a blueprint. To input a blueprint, use the 'blueprint' or 'blueprint_file' parameters or right click a message and select the 'access-blueprint' app command. The response will include blueprint infos like in /blueprint-info with 'advanced' set to false, a link to view the blueprint in [DontMash's 3D blueprint viewer](https://shapez.soren.codes/blueprint), as well as `txt` and `spz2bp` files containing the blueprint
 
 ### Admin commands
 

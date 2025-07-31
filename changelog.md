@@ -1,3 +1,7 @@
+## 31 Jul 25
+- Change 'blueprint' parameter to 'blueprint_code' and make it optional in slash commands
+- Allow shape code generator to output empty shapes
+
 ## 26 Jul 25
 - Update for shapez2 library v1.0.0
 - Remove /msg global-signal-channel

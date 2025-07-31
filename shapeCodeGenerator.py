@@ -290,12 +290,14 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[
         else:
             newShapeCodes = curShapeCodes
 
-        shapeCodesNoEmpty = []
-        for shape in newShapeCodes:
-            if any(any(c != shapeCodes.EMPTY_CHAR for c in l) for l in layers):
-                shapeCodesNoEmpty.append(shapeCodes.LAYER_SEPARATOR.join(shape))
-
-        resultingShapes = [gameObjects.Shape.fromShapeCode(s,curShapesConfig,curColorScheme) for s in shapeCodesNoEmpty]
+        resultingShapes = [
+            gameObjects.Shape.fromShapeCode(
+                shapeCodes.LAYER_SEPARATOR.join(s),
+                curShapesConfig,
+                curColorScheme
+            )
+            for s in newShapeCodes
+        ]
 
         result = (resultingShapes,curShapesConfig)
         return True

@@ -20,8 +20,8 @@ UNKNOWN_ERROR_TEXT = "Unknown error happened"
 MESSAGE_TOO_LONG_TEXT = "Message too long"
 OWNER_ONLY_BADGE = "[Owner only]"
 ADMIN_ONLY_BADGE = "[Admin only]"
-SLASH_CMD_BP_PARAM_DESC = "The full blueprint code"
-SLASH_CMD_BP_FILE_PARAM_DESC = "A file containing the blueprint code"
+SLASH_CMD_BP_CODE_PARAM_DESC = "A blueprint code (SHAPEZ2-...$)"
+SLASH_CMD_BP_FILE_PARAM_DESC = "A blueprint file (i.e. a file that contains a blueprint code)"
 
 # shape viewer
 SHAPE_CHAR_REPLACEMENT = {} # unused but kept just in case

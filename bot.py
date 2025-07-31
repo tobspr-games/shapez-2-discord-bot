@@ -18,7 +18,6 @@ import traceback
 import io
 import typing
 import datetime
-from collections.abc import Callable
 
 
 
@@ -412,14 +411,18 @@ def detectBPVersion(potentialBPCodes:list[str]) -> list[str|int]|None:
 def safenString(string:str) -> str:
     return discord.utils.escape_mentions(string)
 
-async def getBPFromStringOrFile(string:str,file:discord.Attachment|None) -> str|None:
+async def getBPFromStringOrFile(string:str|None,file:discord.Attachment|None) -> tuple[bool,str]:
     if file is None:
+        if string is None:
+            return False, "Either a blueprint code or a blueprint file must be provided"
         toReturn = string
     else:
+        if string is not None:
+            return False, "A blueprint code and a blueprint file can't be both provided at the same time"
         toReturn = await decodeAttachment(file)
         if toReturn is None:
-            return None
-    return toReturn.strip()
+            return False, "Error while processing blueprint file"
+    return True, toReturn.strip()
 
 class getCommandResponseReturn(typing.TypedDict):
     content:typing.NotRequired[str]
@@ -796,7 +799,7 @@ def getAccessBPTextAndFiles(
 
 async def accessBlueprintCommandInnerPart(
     interaction:discord.Interaction,
-    getBPCode:Callable[[],typing.Coroutine[typing.Any,typing.Any,tuple[str,bool]]]
+    getBPCode:typing.Coroutine[typing.Any,typing.Any,tuple[bool,str]]
 ) -> None:
     if exitCommandWithoutResponse(interaction):
         return
@@ -811,18 +814,18 @@ async def accessBlueprintCommandInnerPart(
             responseMsg = globalInfos.NO_PERMISSION_TEXT
             return
 
-        toProcessBlueprint, bpCodeValid = await getBPCode()
-        if not bpCodeValid:
-            responseMsg = toProcessBlueprint
+        valid, errorOrBP = await getBPCode
+        if not valid:
+            responseMsg = errorOrBP
             return
 
         try:
-            decodedBP = spz2.blueprints.decodeBlueprint(toProcessBlueprint)
+            decodedBP = spz2.blueprints.decodeBlueprint(errorOrBP)
         except spz2.blueprints.BlueprintError as e:
             responseMsg = f"Error while decoding blueprint : {e}"
             return
 
-        responseMsg, files = getAccessBPTextAndFiles(decodedBP,toProcessBlueprint,interaction.guild,True)
+        responseMsg, files = getAccessBPTextAndFiles(decodedBP,errorOrBP,interaction.guild,True)
 
     responseMsg = ""
     files = []
@@ -839,13 +842,13 @@ async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None
 
 async def accessBlueprintCommandFromMessage(interaction:discord.Interaction,message:discord.Message) -> None:
 
-    async def getBPCode() -> tuple[str,bool]:
+    async def getBPCode() -> tuple[bool,str]:
         potentialBPCode = await getSinglePotentialBPCodeInMessage(message)
         if potentialBPCode is None:
-            return "Message doesn't contain exactly one blueprint code",False
-        return potentialBPCode,True
+            return False, "Message doesn't contain exactly one blueprint code"
+        return True, potentialBPCode
 
-    await accessBlueprintCommandInnerPart(interaction,getBPCode)
+    await accessBlueprintCommandInnerPart(interaction,getBPCode())
 
 class BPInfoMessageButtons(discord.ui.View):
     def __init__(self):
@@ -1251,12 +1254,12 @@ def runDiscordBot() -> None:
 
     @tree.command(name="update-blueprint",description="Update a blueprint to the latest version")
     @discord.app_commands.describe(
-        blueprint=globalInfos.SLASH_CMD_BP_PARAM_DESC,
+        blueprint_code=globalInfos.SLASH_CMD_BP_CODE_PARAM_DESC,
         blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC
     )
     async def updateBlueprintCommand(
         interaction:discord.Interaction,
-        blueprint:str,
+        blueprint_code:str|None=None,
         blueprint_file:discord.Attachment|None=None
     ) -> None:
         if exitCommandWithoutResponse(interaction):
@@ -1271,13 +1274,13 @@ def runDiscordBot() -> None:
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
                 return
 
-            toProcessBlueprint = await getBPFromStringOrFile(blueprint,blueprint_file)
-            if toProcessBlueprint is None:
-                responseMsg = "Error while processing file"
+            valid, errorOrBP = await getBPFromStringOrFile(blueprint_code,blueprint_file)
+            if not valid:
+                responseMsg = errorOrBP
                 return
 
             try:
-                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.decodeBlueprint(toProcessBlueprint,True))
+                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.decodeBlueprint(errorOrBP,True))
                 noErrors = True
             except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error happened : {e}"
@@ -1423,15 +1426,15 @@ def runDiscordBot() -> None:
 
     @tree.command(name="blueprint-info",description="Get infos about a blueprint")
     @discord.app_commands.describe(
-        blueprint=globalInfos.SLASH_CMD_BP_PARAM_DESC,
-        advanced="Whether or not to get extra infos about the blueprint",
-        blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC
+        blueprint_code=globalInfos.SLASH_CMD_BP_CODE_PARAM_DESC,
+        blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC,
+        advanced="Whether or not to get extra infos about the blueprint"
     )
     async def blueprintInfoCommand(
         interaction:discord.Interaction,
-        blueprint:str,
-        advanced:bool=False,
-        blueprint_file:discord.Attachment|None=None
+        blueprint_code:str|None=None,
+        blueprint_file:discord.Attachment|None=None,
+        advanced:bool=False
     ) -> None:
         if exitCommandWithoutResponse(interaction):
             return
@@ -1445,13 +1448,13 @@ def runDiscordBot() -> None:
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
                 return
 
-            toProcessBlueprint = await getBPFromStringOrFile(blueprint,blueprint_file)
-            if toProcessBlueprint is None:
-                responseMsg = "Error while processing file"
+            valid, errorOrBP = await getBPFromStringOrFile(blueprint_code,blueprint_file)
+            if not valid:
+                responseMsg = errorOrBP
                 return
 
             try:
-                decodedBP = spz2.blueprints.decodeBlueprint(toProcessBlueprint)
+                decodedBP = spz2.blueprints.decodeBlueprint(errorOrBP)
             except spz2.blueprints.BlueprintError as e:
                 responseMsg = f"Error while decoding blueprint : {e}"
                 return
@@ -1684,22 +1687,16 @@ def runDiscordBot() -> None:
 
     @tree.command(name="access-blueprint",description="Access a blueprint")
     @discord.app_commands.describe(
-        blueprint=globalInfos.SLASH_CMD_BP_PARAM_DESC,
+        blueprint_code=globalInfos.SLASH_CMD_BP_CODE_PARAM_DESC,
         blueprint_file=globalInfos.SLASH_CMD_BP_FILE_PARAM_DESC
     )
     async def accessBlueprintCommand(
         interaction:discord.Interaction,
-        blueprint:str,
+        blueprint_code:str|None=None,
         blueprint_file:discord.Attachment|None=None
     ) -> None:
 
-        async def getBPCode() -> tuple[str,bool]:
-            toProcessBlueprint = await getBPFromStringOrFile(blueprint,blueprint_file)
-            if toProcessBlueprint is None:
-                return "Error while processing blueprint file",False
-            return toProcessBlueprint,True
-
-        await accessBlueprintCommandInnerPart(interaction,getBPCode)
+        await accessBlueprintCommandInnerPart(interaction,getBPFromStringOrFile(blueprint_code,blueprint_file))
 
     @tree.context_menu(name="access-blueprint")
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message):

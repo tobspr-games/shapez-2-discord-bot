@@ -105,7 +105,7 @@ def renderShapes(message:str) -> RenderOutput:
 
     if shapes == []:
         if output["errorMsgs"] == []:
-            output["errorMsgs"].append("No non-empty shapes generated")
+            raise ValueError("somehow no shapes generated and no error messages")
         return output
 
     potentialDisplayParams = shapeCodeGenerator.getPotentialDisplayParamsFromMessage(message)
