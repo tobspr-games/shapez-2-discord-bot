@@ -1,6 +1,3 @@
-import os
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = ""
-
 import shapeViewerWrapper
 import globalInfos
 import operationGraph
@@ -18,6 +15,7 @@ import traceback
 import io
 import typing
 import datetime
+import os
 
 
 

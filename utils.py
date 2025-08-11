@@ -4,7 +4,7 @@ import io
 
 def pygameSurfToBytes(surf:pygamePIL.Surface) -> tuple[io.BytesIO,int]:
     with io.BytesIO() as buffer:
-        pygamePIL.image_save(surf,buffer,"png")
+        pygamePIL.image.save(surf,buffer,"png")
         bufferValue = buffer.getvalue()
         bytesLen = len(bufferValue)
         finalBytes = io.BytesIO(bufferValue)

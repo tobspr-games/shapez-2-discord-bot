@@ -43,7 +43,7 @@ async def _debugMenuCheck(message:discord.Message) -> str|None:
 
     with io.BytesIO(imageBytes) as buffer:
         try:
-            image = shapez2.pygamePIL.image_load(buffer)
+            image = shapez2.pygamePIL.image.load(buffer)
         except shapez2.pygamePIL.error:
             return None
 

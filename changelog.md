@@ -1,3 +1,7 @@
+## 11 Aug 25
+- Update for shapez2 library v2.0.0
+- Remove unnecessary (since a long time) code to hide the pygame support prompt
+
 ## 31 Jul 25
 - Change 'blueprint' parameter to 'blueprint_code' and make it optional in slash commands
 - Allow shape code generator to output empty shapes

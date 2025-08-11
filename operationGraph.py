@@ -112,10 +112,10 @@ OPERATIONS:dict[str,Operation] = {
 }
 
 for k,v in OPERATIONS.items():
-    v.image = pygamePIL.image_load(f"{IMAGES_START_PATH}{k}.png")
+    v.image = pygamePIL.image.load(f"{IMAGES_START_PATH}{k}.png")
 
-pygamePIL.font_init()
-SHAPE_VAR_FONT = pygamePIL.font_Font(globalInfos.FONT_PATH,30)
+pygamePIL.font.init()
+SHAPE_VAR_FONT = pygamePIL.font.Font(globalInfos.FONT_PATH,30)
 SHAPE_VAR_COLOR = (255,255,255)
 
 def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|OutputString]:
@@ -471,7 +471,7 @@ def genOperationGraph(
         if node.outputs is not None:
             for output in node.outputs:
                 outputPos = graphNodes[output].pos
-                pygamePIL.draw_line(
+                pygamePIL.draw.line(
                     graphSurface,
                     LINE_COLOR,
                     (node.pos[0]+(GRAPH_NODE_SIZE/2),node.pos[1]+GRAPH_NODE_SIZE),
@@ -483,7 +483,7 @@ def genOperationGraph(
 
     for node in graphNodes.values():
         if (node.type == GraphNode.OP) and (len(node.colorInputs) != 0):
-            curImage = pygamePIL.transform_smoothscale(node.image,(GRAPH_NODE_SIZE-NODE_COLOR_INPUT_WIDTH,)*2)
+            curImage = pygamePIL.transform.smoothscale(node.image,(GRAPH_NODE_SIZE-NODE_COLOR_INPUT_WIDTH,)*2)
             curImagePos = (node.pos[0],node.pos[1]+(NODE_COLOR_INPUT_WIDTH/2))
         else:
             curImage = node.image
@@ -501,7 +501,7 @@ def genOperationGraph(
             if len(node.colorInputs) != 0:
                 curColorInputHeight = GRAPH_NODE_SIZE / len(node.colorInputs)
                 for colorIndex,color in enumerate(node.colorInputs):
-                    pygamePIL.draw_rect(
+                    pygamePIL.draw.rect(
                         graphSurface,
                         colorMode.colorSkin.colors[color],
                         pygamePIL.Rect(
