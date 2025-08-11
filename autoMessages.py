@@ -69,6 +69,8 @@ async def _debugMenuCheck(message:discord.Message) -> str|None:
 def _hardMilestone8Check(message:discord.Message) -> str|None:
     if "P-CcRcCc" not in message.content:
         return None
+    if ("P-CcRcCc:" in message.content) or (":P-CcRcCc" in message.content):
+        return None
     return "".join([
         "Your message contains a shape that requires standalone pins, ",
         "you can find hints and solutions in <https://shapez2.wiki.gg/wiki/Shape_Patterns#Standalone_Pins>. ",
