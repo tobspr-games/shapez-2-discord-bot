@@ -553,7 +553,7 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
     await interaction.message.edit(view=AntispamAlertButtons(userIdInt,buttonStates))
 
 # port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
-async def antiSpam(message:discord.Message) -> bool|None:
+async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
 
     async def sendAlert() -> None:
 
@@ -602,47 +602,64 @@ async def antiSpam(message:discord.Message) -> bool|None:
     curTime = getCurrentTime()
 
     for guildMember in list(antiSpamLastMessages.keys()):
-        if (curTime - antiSpamLastMessages[guildMember]["timestamp"]) > datetime.timedelta(seconds=globalInfos.ANTISPAM_TIME_INTERVAL_SECONDS):
+        if (
+            (curTime - antiSpamLastMessages[guildMember]["timestamp"])
+            > datetime.timedelta(seconds=globalInfos.ANTISPAM_TIME_INTERVAL_SECONDS)
+        ):
             antiSpamLastMessages.pop(guildMember)
 
     curInfo = antiSpamLastMessages.get(curGuildMember)
-    if (curInfo is not None) and (curInfo["content"] == msgContent):
-        curInfo["messages"].append(message)
-        curInfo["count"] += 1
-        curInfo["timestamp"] = curTime
 
-        if curInfo["count"] >= globalInfos.ANTISPAM_MSG_COUNT_TRESHOLD:
-            messages:list[discord.Message] = curInfo["messages"]
-            curInfo["messages"] = []
-
-            if (isinstance(message.author,discord.Member)) and (not message.author.is_timed_out()):
-                try:
-
-                    await message.author.timeout(
-                        datetime.timedelta(seconds=globalInfos.ANTISPAM_TIMEOUT_SECONDS),
-                        reason=f"antispam: {msgContent}" # seems like no errors happen if the reason string is more than the 512 char limit in discord's UI
-                    )
-
-                    for msg in messages: # port difference : only delete if permission to timeout
-                        await msg.delete()
-
-                except (discord.Forbidden,discord.NotFound) as e:
-                    await globalLogMessage(
-                        f"Failed to timeout user ({message.author.id}) or delete messages for antispam ({e.__class__.__name__})"
-                    )
-
-                else:
-                    await sendAlert()
-                    return True
+    if (curInfo is None) or (curInfo["content"] != msgContent):
+        newInfo:antiSpamLastMessagesType = {
+            "content" : msgContent,
+            "messages" : [message],
+            "count" : 1,
+            "timestamp" : curTime
+        }
+        antiSpamLastMessages[curGuildMember] = newInfo
         return
 
-    newInfo:antiSpamLastMessagesType = {
-        "content" : msgContent,
-        "messages" : [message],
-        "count" : 1,
-        "timestamp" : curTime
-    }
-    antiSpamLastMessages[curGuildMember] = newInfo
+    curInfo["messages"].append(message)
+    curInfo["count"] += 1
+    curInfo["timestamp"] = curTime
+
+    if (
+        isinstance(message.author,discord.Member)
+        and (message.author.joined_at is not None)
+        and (
+            (curTime-message.author.joined_at)
+            < datetime.timedelta(hours=globalInfos.ANTISPAM_NEW_MEMBER_PERIOD_HOURS)
+        )
+    ):
+        curThreshold = globalInfos.ANTISPAM_MSG_COUNT_NEW_MEMBER_THRESHOLD
+    else:
+        curThreshold = globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD
+
+    if curInfo["count"] < curThreshold:
+        return
+
+    if (isinstance(message.author,discord.User)) or (message.author.is_timed_out()):
+        return
+
+    try:
+        await message.author.timeout(
+            datetime.timedelta(seconds=globalInfos.ANTISPAM_TIMEOUT_SECONDS),
+            reason=f"antispam: {msgContent}"
+        )
+    except discord.Forbidden:
+        await globalLogMessage(f"Failed to timeout {message.author.id} for antispam")
+        return
+
+    # port difference : only delete if permission to timeout
+    for msg in curInfo["messages"]:
+        try:
+            await msg.delete()
+        except (discord.Forbidden,discord.NotFound) as e:
+            await globalLogMessage(f"Failed to delete {msg.jump_url} for antispam ({e.__class__.__name__})")
+
+    await sendAlert()
+    return True
 
 async def concatMsgContentAndAttachments(content:str,attachments:list[discord.Attachment]) -> str:
     for file in attachments:

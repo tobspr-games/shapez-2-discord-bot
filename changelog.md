@@ -1,3 +1,7 @@
+## 30 Aug 25
+- Make antispam trigger after 2 messages instead of 4 for members who joined the server less than 24 hours ago
+- Clean up antispam logic
+
 ## 11 Aug 25
 - Update for shapez2 library v2.0.0
 - Remove unnecessary (since a long time) code to hide the pygame support prompt
