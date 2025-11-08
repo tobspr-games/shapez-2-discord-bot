@@ -355,7 +355,7 @@ def genOperationGraph(
             return curId
 
         connectedInputs = []
-        inputShapes = []
+        inputShapes:list[gameObjects.Shape] = []
         inputShapesConfigs = []
 
         curCurId = newId()
@@ -390,6 +390,7 @@ def genOperationGraph(
 
         graphNodes[curCurId].inputs.extend(connectedInputs)
 
+        inputShapes = [s.copy() for s in inputShapes]
         outputShapes = instruction.op.func(
             *inputShapes,
             *instruction.colorInputs,

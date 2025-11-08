@@ -470,36 +470,48 @@ class AntispamAlertButtons(discord.ui.View):
 
     REASON_MSG = "Request by moderator from antispam alert"
 
-    def __init__(self,userId:int,buttonStates:str="1111"):
+    def __init__(
+        self,
+        userId:int,
+        thresholdLevel:typing.Literal["l","n","h"],
+        buttonStates:str="1111"
+    ):
         super().__init__()
+        customIdTemplate = f"antispam-{{0}}-{userId}-{buttonStates}-{thresholdLevel}"
         self.add_item(discord.ui.Button(
             label = "Send info DM",
             style = discord.ButtonStyle.blurple,
-            custom_id = f"antispam-sendDM-{userId}-{buttonStates}",
+            custom_id = customIdTemplate.format("sendDM"),
             disabled = buttonStates[0] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Un-timeout",
             style = discord.ButtonStyle.green,
-            custom_id = f"antispam-untimeout-{userId}-{buttonStates}",
+            custom_id = customIdTemplate.format("untimeout"),
             disabled = buttonStates[1] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Kick",
             style = discord.ButtonStyle.red,
-            custom_id = f"antispam-kick-{userId}-{buttonStates}",
+            custom_id = customIdTemplate.format("kick"),
             disabled = buttonStates[2] == "0"
         ))
         self.add_item(discord.ui.Button(
             label = "Ban",
             style = discord.ButtonStyle.red,
-            custom_id = f"antispam-ban-{userId}-{buttonStates}",
+            custom_id = customIdTemplate.format("ban"),
             disabled = buttonStates[3] == "0"
+        ))
+        thresholdName = {"l":"low","n":"normal","h":"high"}[thresholdLevel]
+        self.add_item(discord.ui.Button(
+            label = f"Threshold used : {thresholdName}",
+            style = discord.ButtonStyle.grey,
+            disabled = True
         ))
 
 async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawAction:str) -> None:
 
-    action, userId, buttonStates = rawAction.split("-")
+    action, userId, buttonStates, thresholdLevel = rawAction.split("-")
     assert interaction.guild is not None
     assert interaction.message is not None
     userIdInt = int(userId)
@@ -550,7 +562,7 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
 
     await interaction.response.send_message(responseMsg,ephemeral=True)
     buttonStates = "".join("0" if i in disableIndexes else state for i,state in enumerate(buttonStates))
-    await interaction.message.edit(view=AntispamAlertButtons(userIdInt,buttonStates))
+    await interaction.message.edit(view=AntispamAlertButtons(userIdInt,thresholdLevel,buttonStates))
 
 # port of sbe's antispam feature with difference of being separated per server and possiblity of sending an alert when triggered
 async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
@@ -573,7 +585,7 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         else:
             kwargs["file"] = msgContentFile
 
-        await curAlertChannel.send(alertMsg,view=AntispamAlertButtons(message.author.id),**kwargs)
+        await curAlertChannel.send(alertMsg,view=AntispamAlertButtons(message.author.id,thresholdName),**kwargs)
 
     if globalPaused:
         return
@@ -590,9 +602,6 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
     curGuildSettings = await guildSettings.getGuildSettings(message.guild.id)
 
     if not curGuildSettings["antispamEnabled"]:
-        return
-
-    if message.content == "": # message consists of only attachments
         return
 
     userId = message.author.id
@@ -624,6 +633,9 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
     curInfo["count"] += 1
     curInfo["timestamp"] = curTime
 
+    severity = 1
+
+    # member joined recently
     if (
         isinstance(message.author,discord.Member)
         and (message.author.joined_at is not None)
@@ -632,11 +644,30 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
             < datetime.timedelta(hours=globalInfos.ANTISPAM_NEW_MEMBER_PERIOD_HOURS)
         )
     ):
-        curThreshold = globalInfos.ANTISPAM_MSG_COUNT_NEW_MEMBER_THRESHOLD
-    else:
-        curThreshold = globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD
+        severity += 1
 
-    if curInfo["count"] < curThreshold:
+    # message contains only attachments
+    if msgContent == "":
+        severity -= 1
+
+    # common spam patterns
+    if "https://" in msgContent:
+        severity += 1
+    if "@everyone" in msgContent:
+        severity += 1
+    if "@here" in msgContent:
+        severity += 1
+    if "(how)" in msgContent.lower():
+        severity += 1
+
+    severity = min(2,max(0,severity))
+    threshold, thresholdName = (
+        (globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD_HIGH,"h"),
+        (globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD_NORMAL,"n"),
+        (globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD_LOW,"l")
+    )[severity]
+
+    if curInfo["count"] < threshold:
         return
 
     if (isinstance(message.author,discord.User)) or (message.author.is_timed_out()):

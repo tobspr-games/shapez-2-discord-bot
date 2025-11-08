@@ -1,3 +1,12 @@
+## 08 Nov 25
+- Make antispam use a severity system varying based on different factors :
+  - 3 severity levels corresponding to the message count limit : 8 (high), 4 (normal), or 2 (low)
+  - Attachment-only messages now decrease the severity instead of being ignored
+  - The user having joined recently now increases the severity
+  - Messages containing `https://`, `@everyone`, `@here`, or `(how)` increases the severity
+  - The message count limit used is shown in a button in the alert message
+- Fix sometimes incorrect shape codes shown in /operation-graph
+
 ## 30 Aug 25
 - Make antispam trigger after 2 messages instead of 4 for members who joined the server less than 24 hours ago
 - Clean up antispam logic
