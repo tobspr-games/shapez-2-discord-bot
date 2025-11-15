@@ -6,6 +6,69 @@ import shapez2
 from shapez2 import gameObjects
 import io
 import typing
+import math
+
+SHAPE_CODE_OPENING = "{"
+SHAPE_CODE_CLOSING = "}"
+SHAPE_ROW_SEP = "[sep]"
+DISPLAY_PARAM_PREFIX = "/"
+DISPLAY_PARAM_EXIT_CHAR = " "
+DISPLAY_PARAM_KEY_VALUE_SEPARATOR = ":"
+
+def getPotentialShapeCodesFromMessage(message:str) -> tuple[bool,list[list[str]]]:
+
+    def potentialCodesFromSubstring(string:str) -> list[str]:
+        if SHAPE_CODE_OPENING not in string:
+            return []
+        potentialShapeCodes = []
+        for split in string.split(SHAPE_CODE_OPENING)[1:]:
+            if SHAPE_CODE_CLOSING in split:
+                potentialShapeCode = split.split(SHAPE_CODE_CLOSING)[0]
+                if potentialShapeCode != "":
+                    potentialShapeCodes.append(potentialShapeCode)
+        return potentialShapeCodes
+
+    if SHAPE_ROW_SEP not in message:
+        result = potentialCodesFromSubstring(message)
+        return True, [] if result == [] else [result]
+
+    result = [potentialCodesFromSubstring(row) for row in message.split(SHAPE_ROW_SEP)]
+
+    # remove leading empty rows
+    for row in list(result):
+        if row != []:
+            break
+        result.pop(0)
+
+    # remove trailing empty rows
+    for row in reversed(result):
+        if row != []:
+            break
+        result.pop(-1)
+
+    return False, result
+
+def getPotentialDisplayParamsFromMessage(message:str) -> list[tuple]:
+
+    if DISPLAY_PARAM_PREFIX not in message:
+        return []
+
+    prefixSplits = message.split(DISPLAY_PARAM_PREFIX)[1:]
+    potentialDisplayParams = []
+
+    for split in prefixSplits:
+
+        if DISPLAY_PARAM_EXIT_CHAR in split:
+            potentialDisplayParam = split.split(DISPLAY_PARAM_EXIT_CHAR)[0]
+        else:
+            potentialDisplayParam = split
+
+        if DISPLAY_PARAM_KEY_VALUE_SEPARATOR in potentialDisplayParam:
+            potentialDisplayParams.append(tuple(potentialDisplayParam.split(DISPLAY_PARAM_KEY_VALUE_SEPARATOR)[:2]))
+        else:
+            potentialDisplayParams.append((potentialDisplayParam,))
+
+    return potentialDisplayParams
 
 class DisplayParam:
 
@@ -73,8 +136,8 @@ class RenderOutput(typing.TypedDict):
     hasPotentialShapeCodes:bool
     finalImage:tuple[io.BytesIO,int]|None
     spoiler:bool
-    shapeCodes:list[str]|None
-    viewer3dLinks:list[str]|None
+    shapeCodes:list[list[str]]|None
+    viewer3dLinks:list[list[str]]|None
 
 def renderShapes(message:str) -> RenderOutput:
 
@@ -87,28 +150,41 @@ def renderShapes(message:str) -> RenderOutput:
         "viewer3dLinks" : None
     }
 
-    potentialShapeCodes = shapeCodeGenerator.getPotentialShapeCodesFromMessage(message)
+    autoRows, potentialShapeCodes = getPotentialShapeCodesFromMessage(message)
 
     if potentialShapeCodes == []:
         output["errorMsgs"].append("No potential shape codes detected")
         return output
 
     output["hasPotentialShapeCodes"] = True
-    shapes:list[tuple[gameObjects.Shape,gameObjects.ShapesConfiguration]] = []
+    shapes:list[list[tuple[gameObjects.Shape,gameObjects.ShapesConfiguration]]] = []
 
-    for i,code in enumerate(potentialShapeCodes):
-        errorMsg, result = shapeCodeGenerator.generateShapeCodes(code)
-        if result is None:
-            output["errorMsgs"].append(f"Invalid shape code for shape {i+1} : {errorMsg}")
-        else:
-            shapes.extend((shape,result[1]) for shape in result[0])
+    shapeIndex = 0
+    for row in potentialShapeCodes:
+        shapes.append([])
+        for code in row:
+            errorMsg, result = shapeCodeGenerator.generateShapeCodes(code)
+            if result is None:
+                output["errorMsgs"].append(f"Invalid shape code for shape {shapeIndex+1} : {errorMsg}")
+            else:
+                shapes[-1].extend((shape,result[1]) for shape in result[0])
+            shapeIndex += 1
 
     if shapes == []:
         if output["errorMsgs"] == []:
             raise ValueError("somehow no shapes generated and no error messages")
         return output
 
-    potentialDisplayParams = shapeCodeGenerator.getPotentialDisplayParamsFromMessage(message)
+    if autoRows:
+        rawShapes = shapes[0]
+        rawShapesLen = len(rawShapes)
+        shapesPerRaw = globalInfos.DEFAULT_SHAPES_PER_ROW
+        if rawShapesLen > shapesPerRaw+2:
+            shapes = []
+            for i in range(math.ceil(rawShapesLen/shapesPerRaw)):
+                shapes.append(rawShapes[i*shapesPerRaw:(i+1)*shapesPerRaw])
+
+    potentialDisplayParams = getPotentialDisplayParamsFromMessage(message)
     curDisplayParams = {k:v.default for k,v in DISPLAY_PARAMS.items()}
 
     for param in potentialDisplayParams:
@@ -119,37 +195,43 @@ def renderShapes(message:str) -> RenderOutput:
 
     output["spoiler"] = curDisplayParams["spoiler"]
     if curDisplayParams["result"]:
-        output["shapeCodes"] = [s[0].toShapeCode() for s in shapes]
+        output["shapeCodes"] = [[s[0].toShapeCode() for s in row] for row in shapes]
 
     curDisplayParams["colors"] = curDisplayParams["colors"].upper()
     if curDisplayParams["colors"].endswith("-CB"):
         curDisplayParams["colors"] = curDisplayParams["colors"].removesuffix("-CB") + "-cb"
     curColorMode = shapez2.ingameData.DEFAULT_COLOR_SCHEME.colorModesById[curDisplayParams["colors"]]
 
-    numShapes = len(shapes)
     size = curDisplayParams["size"]
     finalImage = shapez2.pygamePIL.Surface(
-        (size*min(globalInfos.SHAPES_PER_ROW,numShapes),size*(((numShapes-1)//globalInfos.SHAPES_PER_ROW)+1)),
+        (size*max(len(r) for r in shapes),size*len(shapes)),
         shapez2.pygamePIL.SRCALPHA
     )
 
     renderedShapesCache = {}
-    for i,shape in enumerate(shapes):
-        if renderedShapesCache.get(shape) is None:
-            renderedShapesCache[shape] = shapez2.shapeViewer.renderShape(shape[0],size,curColorMode,shape[1])
-        divMod = divmod(i,globalInfos.SHAPES_PER_ROW)
-        finalImage.blit(renderedShapesCache[shape],(size*divMod[1],size*divMod[0]))
+    for rowIndex,row in enumerate(shapes):
+        for shapeIndex,shape in enumerate(row):
+            if renderedShapesCache.get(shape) is None:
+                renderedShapesCache[shape] = shapez2.shapeViewer.renderShape(
+                    shape[0],size,curColorMode,shape[1]
+                )
+            finalImage.blit(
+                renderedShapesCache[shape],
+                (size*shapeIndex,size*rowIndex)
+            )
 
     output["finalImage"] = utils.pygameSurfToBytes(finalImage)
 
     if curDisplayParams["3d"]:
         output["viewer3dLinks"] = []
-        for shape,_ in shapes:
-            shapeCode = shape.toShapeCode()
-            linkSafeCode = shapeCode
-            for old,new in globalInfos.LINK_CHAR_REPLACEMENT.items():
-                linkSafeCode = linkSafeCode.replace(old,new)
-            link = f"[{shapeCode}](<{globalInfos.SHAPE_3D_VIEWER_LINK_START}{linkSafeCode}>)"
-            output["viewer3dLinks"].append(link)
+        for row in shapes:
+            output["viewer3dLinks"].append([])
+            for shape,_ in row:
+                shapeCode = shape.toShapeCode()
+                linkSafeCode = shapeCode
+                for old,new in globalInfos.LINK_CHAR_REPLACEMENT.items():
+                    linkSafeCode = linkSafeCode.replace(old,new)
+                link = f"[{shapeCode}](<{globalInfos.SHAPE_3D_VIEWER_LINK_START}{linkSafeCode}>)"
+                output["viewer3dLinks"][-1].append(link)
 
     return output

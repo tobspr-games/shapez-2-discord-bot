@@ -34,6 +34,8 @@ Put your shape code and parameters in `{}`
 - w : White
 - \- : Nothing
 
+Note : shapes with more than 4 layers and/or with more/less than 4 quadrants per layer are supported
+
 ### Parameters
 
 Each parameter must have a `+` in front of it
@@ -66,9 +68,18 @@ Display parameters must be put outside of the `{}`, have a `/` in front of them 
 - /spoiler : Will mark the resulting image as spoiler
 - /result : Will additionally send the generated shape codes
 - /3d : Will additionally send links to [DontMash's 3D shape viewer](https://shapez.soren.codes/shape)
-- /colors : Will control the color mode used for shapes (default:RGB, available:RGB,RYB,CMYK,RGB-cb)
+- /colors:RYB : Will control the color mode used for shapes (default:RGB, available:RGB,RYB,CMYK,RGB-cb)
 
-Note : shapes with more than 4 layers and/or with more/less than 4 quadrants per layer are supported
+### Rows control
+
+The `[sep]` keyword can be used to control the layout in which shapes appear :
+
+- If the message doesn't contain `[sep]` :
+  - If there are 10 or less shapes rendered, they will be put in a single row
+  - If there are more than 10 shapes, they will be put on rows of 8 shapes, except for the last one which can contain less
+- If there is at least one `[sep]` in the message :
+  - Shapes will be put on rows without a max size, each `[sep]` will make the following shapes render on a new row below
+  - Empty rows are allowed, except leading and trailing empty rows which will be removed
 
 ## Slash commands
 

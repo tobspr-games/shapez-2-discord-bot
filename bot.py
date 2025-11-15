@@ -65,19 +65,19 @@ async def useShapeViewer(userMessage:str,sendErrors:bool,userId:int) -> tuple[bo
 
         if renderResult["shapeCodes"] is not None:
             msgParts.append(
-                "**Resulting shape codes :**\n"+
-                "\n".join(
-                    " ".join(f"{{{code}}}" for code in codeGroup)
-                    for codeGroup in discord.utils.as_chunks(renderResult["shapeCodes"],globalInfos.SHAPES_PER_ROW)
+                "**Resulting shape codes :**\n"
+                + "\n".join(
+                    " ".join(f"{{{code}}}" for code in row)
+                    for row in renderResult["shapeCodes"]
                 )
             )
 
         if renderResult["viewer3dLinks"] is not None:
             msgParts.append(
-                "**3D viewer links :**\n"+
-                "\n".join(
-                    " ".join(f"{{{link}}}" for link in linkGroup)
-                    for linkGroup in discord.utils.as_chunks(renderResult["viewer3dLinks"],globalInfos.SHAPES_PER_ROW)
+                "**3D viewer links :**\n"
+                + "\n".join(
+                    " ".join(f"{{{link}}}" for link in row)
+                    for row in renderResult["viewer3dLinks"]
                 )
             )
 

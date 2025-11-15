@@ -1,3 +1,7 @@
+## 15 Nov 25
+- Add `[sep]` keyword to shape viewer to control how rows of shapes are made
+- When rows are automatically created, make shapes render on a single row when there are 10 or less
+
 ## 08 Nov 25
 - Make antispam use a severity system varying based on different factors :
   - 3 severity levels corresponding to the message count limit : 8 (high), 4 (normal), or 2 (low)

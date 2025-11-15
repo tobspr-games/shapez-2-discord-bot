@@ -12,40 +12,7 @@ STRUCT_SHAPE = {
 }
 
 PARAM_PREFIX = "+"
-DISPLAY_PARAM_PREFIX = "/"
-DISPLAY_PARAM_EXIT_CHAR = " "
-DISPLAY_PARAM_KEY_VALUE_SEPARATOR = ":"
-SHAPE_CODE_OPENING = "{"
-SHAPE_CODE_CLOSING = "}"
 INGNORE_CHARS_IN_SHAPE_CODE = ["`"]
-
-def getPotentialShapeCodesFromMessage(message:str) -> list[str]:
-    if (message == "") or (SHAPE_CODE_OPENING not in message):
-        return []
-    openingSplits = message.split(SHAPE_CODE_OPENING)[1:]
-    potentialShapeCodes = []
-    for split in openingSplits:
-        if SHAPE_CODE_CLOSING in split:
-            potentialShapeCode = split.split(SHAPE_CODE_CLOSING)[0]
-            if potentialShapeCode != "":
-                potentialShapeCodes.append(potentialShapeCode)
-    return potentialShapeCodes
-
-def getPotentialDisplayParamsFromMessage(message:str) -> list[tuple]:
-    if (message == "") or (DISPLAY_PARAM_PREFIX not in message):
-        return []
-    prefixSplits = message.split(DISPLAY_PARAM_PREFIX)[1:]
-    potentialDisplayParams = []
-    for split in prefixSplits:
-        if DISPLAY_PARAM_EXIT_CHAR in split:
-            potentialDisplayParam = split.split(DISPLAY_PARAM_EXIT_CHAR)[0]
-        else:
-            potentialDisplayParam = split
-        if DISPLAY_PARAM_KEY_VALUE_SEPARATOR in potentialDisplayParam:
-            potentialDisplayParams.append(tuple(potentialDisplayParam.split(DISPLAY_PARAM_KEY_VALUE_SEPARATOR)[:2]))
-        else:
-            potentialDisplayParams.append((potentialDisplayParam,))
-    return potentialDisplayParams
 
 def generateShapeCodes(potentialShapeCode:str) -> tuple[
     str,
