@@ -15,39 +15,6 @@ DISPLAY_PARAM_PREFIX = "/"
 DISPLAY_PARAM_EXIT_CHAR = " "
 DISPLAY_PARAM_KEY_VALUE_SEPARATOR = ":"
 
-def getPotentialShapeCodesFromMessage(message:str) -> tuple[bool,list[list[str]]]:
-
-    def potentialCodesFromSubstring(string:str) -> list[str]:
-        if SHAPE_CODE_OPENING not in string:
-            return []
-        potentialShapeCodes = []
-        for split in string.split(SHAPE_CODE_OPENING)[1:]:
-            if SHAPE_CODE_CLOSING in split:
-                potentialShapeCode = split.split(SHAPE_CODE_CLOSING)[0]
-                if potentialShapeCode != "":
-                    potentialShapeCodes.append(potentialShapeCode)
-        return potentialShapeCodes
-
-    if SHAPE_ROW_SEP not in message:
-        result = potentialCodesFromSubstring(message)
-        return True, [] if result == [] else [result]
-
-    result = [potentialCodesFromSubstring(row) for row in message.split(SHAPE_ROW_SEP)]
-
-    # remove leading empty rows
-    for row in list(result):
-        if row != []:
-            break
-        result.pop(0)
-
-    # remove trailing empty rows
-    for row in reversed(result):
-        if row != []:
-            break
-        result.pop(-1)
-
-    return False, result
-
 def getPotentialDisplayParamsFromMessage(message:str) -> list[tuple]:
 
     if DISPLAY_PARAM_PREFIX not in message:
@@ -150,32 +117,54 @@ def renderShapes(message:str) -> RenderOutput:
         "viewer3dLinks" : None
     }
 
-    autoRows, potentialShapeCodes = getPotentialShapeCodesFromMessage(message)
+    potentialShapeCodes:list[list[str]] = []
+    for row in message.split(SHAPE_ROW_SEP):
+        potentialRowShapeCodes = []
+        for split in row.split(SHAPE_CODE_OPENING)[1:]:
+            if SHAPE_CODE_CLOSING in split:
+                potentialShapeCode = split.split(SHAPE_CODE_CLOSING)[0]
+                if potentialShapeCode != "":
+                    potentialRowShapeCodes.append(potentialShapeCode)
+        potentialShapeCodes.append(potentialRowShapeCodes)
 
-    if potentialShapeCodes == []:
+    if all(r == [] for r in potentialShapeCodes):
         output["errorMsgs"].append("No potential shape codes detected")
         return output
 
     output["hasPotentialShapeCodes"] = True
     shapes:list[list[tuple[gameObjects.Shape,gameObjects.ShapesConfiguration]]] = []
 
-    shapeIndex = 0
+    shapeIndex = 1
     for row in potentialShapeCodes:
         shapes.append([])
         for code in row:
             errorMsg, result = shapeCodeGenerator.generateShapeCodes(code)
             if result is None:
-                output["errorMsgs"].append(f"Invalid shape code for shape {shapeIndex+1} : {errorMsg}")
+                output["errorMsgs"].append(f"Invalid shape code for shape {shapeIndex} : {errorMsg}")
             else:
                 shapes[-1].extend((shape,result[1]) for shape in result[0])
             shapeIndex += 1
 
+    # remove leading empty rows
+    for row in list(shapes):
+        if row != []:
+            break
+        shapes.pop(0)
+
+    # remove trailing empty rows
+    for row in reversed(shapes):
+        if row != []:
+            break
+        shapes.pop(-1)
+
+    # no need to check for the case where all inner rows
+    # would be empty as they would be removed above
     if shapes == []:
         if output["errorMsgs"] == []:
             raise ValueError("somehow no shapes generated and no error messages")
         return output
 
-    if autoRows:
+    if SHAPE_ROW_SEP not in message:
         rawShapes = shapes[0]
         rawShapesLen = len(rawShapes)
         shapesPerRaw = globalInfos.DEFAULT_SHAPES_PER_ROW

@@ -1,3 +1,7 @@
+## 23 Nov 25
+- Fix error when all shapes are invalid in shape viewer
+- Fix leading and trailing empty rows not being removed when they are created because of invalid shapes in shape viewer
+
 ## 15 Nov 25
 - Add `[sep]` keyword to shape viewer to control how rows of shapes are made
 - When rows are automatically created, make shapes render on a single row when there are 10 or less
