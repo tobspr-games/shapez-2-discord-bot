@@ -1,3 +1,6 @@
+## 29 Nov 25
+- Prevent high antispam severity if all messages are in the same channel
+
 ## 23 Nov 25
 - Fix error when all shapes are invalid in shape viewer
 - Fix leading and trailing empty rows not being removed when they are created because of invalid shapes in shape viewer

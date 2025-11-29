@@ -661,6 +661,11 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         severity += 1
 
     severity = min(2,max(0,severity))
+
+    # prevent high severity if all messages are in the same channel
+    if all(msg.channel == curInfo["messages"][0].channel for msg in curInfo["messages"][1:]):
+        severity = min(1,severity)
+
     threshold, thresholdName = (
         (globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD_HIGH,"h"),
         (globalInfos.ANTISPAM_MSG_COUNT_THRESHOLD_NORMAL,"n"),
