@@ -1,3 +1,6 @@
+## 08 Dec 25
+- Allow using `U+2014` (`EM DASH`) as a substitute for `--` in shape code generator
+
 ## 29 Nov 25
 - Prevent high antispam severity if all messages are in the same channel
 

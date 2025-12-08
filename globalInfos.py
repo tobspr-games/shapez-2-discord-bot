@@ -24,7 +24,9 @@ SLASH_CMD_BP_CODE_PARAM_DESC = "A blueprint code (SHAPEZ2-...$)"
 SLASH_CMD_BP_FILE_PARAM_DESC = "A blueprint file (i.e. a file that contains a blueprint code)"
 
 # shape viewer
-SHAPE_CHAR_REPLACEMENT = {} # unused but kept just in case
+SHAPE_CHAR_REPLACEMENT = {
+    "\u2014" : "--"
+}
 SHAPE_VIEWER_SLASH_CMD_TIP_NUM_ERRORS = 4
 SHAPE_VIEWER_SLASH_CMD_TIP_TIME_INTERVAL_SECONDS = 30
 

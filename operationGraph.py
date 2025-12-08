@@ -166,6 +166,7 @@ def getInstructionsFromText(text:str) -> tuple[bool,list[Instruction]|str|Output
             return False,OutputString("Unknown operation '",OutputString.UnsafeString(op),"'")
 
         inputs = inputs.split(VALUE_SEPARATOR)
+        # potential color characters replacement
         for old,new in globalInfos.SHAPE_CHAR_REPLACEMENT.items():
             inputs = [i.replace(old,new) for i in inputs]
         outputs = outputs.split(VALUE_SEPARATOR)
