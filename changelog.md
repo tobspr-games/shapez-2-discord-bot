@@ -1,3 +1,16 @@
+## 14 Dec 25
+- Rework antispam again :
+  - Now activates even if the spam content is spread across multiple messages
+  - Only activates when the messages are sent in different channels
+  - Message count limit changed to channel count limit
+  - Only keep 2 and 4 as possible channel count limits :
+    - 4 by default
+    - 2 if the user joined the server recently
+    - except 4 if at least one message has fewer than 10 characters in its content
+      - includes short messages that are more likely to be repeated without a spam intention
+      - also includes empty text content, i.e. attachment-only messages
+  - Abandon other text-content-based conditions
+
 ## 08 Dec 25
 - Allow using `U+2014` (`EM DASH`) as a substitute for `--` in shape code generator
 
