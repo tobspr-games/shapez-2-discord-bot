@@ -1,2 +1,2 @@
 discord.py==2.5.2
-shapez2~=2.0
+shapez2==2.1.1
