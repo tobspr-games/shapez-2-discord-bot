@@ -1,3 +1,6 @@
+## 11 Jan 26
+- Lower antispam high threshold from 4 to 3
+
 ## 14 Dec 25
 - Rework antispam again :
   - Now activates even if the spam content is spread across multiple messages
