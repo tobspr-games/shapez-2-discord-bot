@@ -515,47 +515,57 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
     assert interaction.guild is not None
     assert interaction.message is not None
     userIdInt = int(userId)
+    interactingUserPerms = interaction.channel.permissions_for(interaction.user)
 
     try:
         user = await interaction.guild.fetch_member(userIdInt)
     except (discord.Forbidden,discord.NotFound):
         user = None
 
+    disableIndexes = []
     if user is None:
         responseMsg = "Couldn't find user"
-        disableIndexes = []
 
     elif action == "sendDM":
         try:
             await user.send(globalInfos.ANTISPAM_DM_MSG)
             responseMsg = "Succesfully sent DM"
+            disableIndexes = [0]
         except discord.Forbidden:
             responseMsg = "Failed to send DM"
-        disableIndexes = [0]
 
     elif action == "untimeout":
-        try:
-            await user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
-            responseMsg = "Succesfully un-timed out user"
-        except (discord.Forbidden,discord.NotFound):
-            responseMsg = "Failed to un-timeout user"
-        disableIndexes = [1]
+        if interactingUserPerms.moderate_members:
+            try:
+                await user.timeout(None,reason=AntispamAlertButtons.REASON_MSG)
+                responseMsg = "Succesfully un-timed out user"
+                disableIndexes = [1]
+            except (discord.Forbidden,discord.NotFound):
+                responseMsg = "Failed to un-timeout user"
+        else:
+            responseMsg = globalInfos.NO_PERMISSION_TEXT
 
     elif action == "kick":
-        try:
-            await user.kick(reason=AntispamAlertButtons.REASON_MSG)
-            responseMsg = "Succesfully kicked user"
-        except (discord.Forbidden,discord.NotFound):
-            responseMsg = "Failed to kick user"
-        disableIndexes = list(range(4))
+        if interactingUserPerms.kick_members:
+            try:
+                await user.kick(reason=AntispamAlertButtons.REASON_MSG)
+                responseMsg = "Succesfully kicked user"
+                disableIndexes = list(range(4))
+            except (discord.Forbidden,discord.NotFound):
+                responseMsg = "Failed to kick user"
+        else:
+            responseMsg = globalInfos.NO_PERMISSION_TEXT
 
     elif action == "ban":
-        try:
-            await user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
-            responseMsg = "Succesfully banned user"
-        except (discord.Forbidden,discord.NotFound):
-            responseMsg = "Failed to ban user"
-        disableIndexes = list(range(4))
+        if interactingUserPerms.ban_members:
+            try:
+                await user.ban(delete_message_days=0,reason=AntispamAlertButtons.REASON_MSG)
+                responseMsg = "Succesfully banned user"
+                disableIndexes = list(range(4))
+            except (discord.Forbidden,discord.NotFound):
+                responseMsg = "Failed to ban user"
+        else:
+            responseMsg = globalInfos.NO_PERMISSION_TEXT
 
     else:
         raise ValueError(f"Unknown antispam action : {action}")
@@ -577,13 +587,17 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         if not isinstance(curAlertChannel,(discord.TextChannel,discord.Thread)):
             return
 
-        alertMsg = f"{message.author.mention} triggered the antispam :"
-        msgContentsFile = msgToFile(alertMsgContents,"messageContents.txt",curAlertChannel.guild)
+        alertMsg = f"{message.author.mention} triggered the antispam "
         kwargs = {}
-        if msgContentsFile is None:
-            alertMsg += " <couldn't put message content in a file>"
+        if len(alertMsgContents) == 0:
+            alertMsg += "(attachment-only message)"
         else:
-            kwargs["file"] = msgContentsFile
+            msgContentsFile = msgToFile(alertMsgContents,"messageContents.txt",curAlertChannel.guild)
+            if msgContentsFile is None:
+                alertMsg += "(couldn't put message content in a file)"
+            else:
+                kwargs["file"] = msgContentsFile
+                alertMsg += ":"
 
         await curAlertChannel.send(alertMsg,view=AntispamAlertButtons(message.author.id,thresholdName),**kwargs)
 
@@ -604,11 +618,8 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
     if not curGuildSettings["antispamEnabled"]:
         return
 
-    curGuildMember = (message.author.id,message.guild.id)
-    msgContent = message.content
-    msgChannelId = message.channel.id
+    # remove messages that are too old
     curTime = getCurrentTime()
-
     for guildMember in list(antiSpamLastMessages.keys()):
         if (
             (curTime - antiSpamLastMessages[guildMember]["messages"][-1].created_at)
@@ -616,6 +627,26 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         ):
             antiSpamLastMessages.pop(guildMember)
 
+    if len(message.content) == 0:
+        msgContent = b""
+        for att in message.attachments:
+            if att.width is None:
+                continue
+            if att.size > globalInfos.MAX_DOWNLOAD_IMAGE_FILE_SIZE:
+                continue
+            try:
+                msgContent += await att.read()
+            except (discord.HTTPException,discord.NotFound):
+                pass
+    else:
+        msgContent = message.content
+
+    # if no text and no images
+    if len(msgContent) == 0:
+        return
+
+    curGuildMember = (message.author.id,message.guild.id)
+    msgChannelId = message.channel.id
     curInfo = antiSpamLastMessages.get(curGuildMember)
 
     if curInfo is None:
@@ -626,6 +657,8 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         antiSpamLastMessages[curGuildMember] = newInfo
         return
 
+    # reset to latest message if the content hasn't been seen in another channel
+    # where other messages have already been posted
     for contentsChannelId,contents in curInfo["contents"].items():
         if msgChannelId == contentsChannelId:
             continue
@@ -634,6 +667,7 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
             curInfo["contents"] = {msgChannelId : [msgContent]}
             return
 
+    # keep track of the current message and its content
     curInfo["messages"].append(message)
     if curInfo["contents"].get(msgChannelId) is None:
         curInfo["contents"][msgChannelId] = [msgContent]
@@ -642,7 +676,7 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
 
     highThreshold = True
 
-    # member joined recently
+    # if the member joined recently
     if (
         isinstance(message.author,discord.Member)
         and (message.author.joined_at is not None)
@@ -653,11 +687,24 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
     ):
         highThreshold = False
 
+    # the first channel is guaranteed to have all message contents
     allContents = list(curInfo["contents"].values())[0]
 
+    # if the message content is short
+    # and thus more likely to be legitimately repeated
+    if any(len(c) < 10 for c in allContents):
+        highThreshold = True
+
+    # if there are only images and no text
+    if all(isinstance(c,bytes) for c in allContents):
+        highThreshold = False
+
+    # if there are "forbidden" words
     for content in allContents:
-        if len(content) < 10:
-            highThreshold = True
+        if not isinstance(content,str):
+            continue
+        if any(s in content for s in ("@everyone","@here")):
+            highThreshold = False
             break
 
     threshold, thresholdName = (
@@ -672,7 +719,9 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
     if (isinstance(message.author,discord.User)) or (message.author.is_timed_out()):
         return
 
-    alertMsgContents = "\n\n===== ShapeBot 2 separator =====\n\n".join(allContents)
+    alertMsgContents = "\n\n===== ShapeBot 2 separator =====\n\n".join(
+        c for c in allContents if isinstance(c,str)
+    )
 
     try:
         await message.author.timeout(
@@ -681,7 +730,7 @@ async def antiSpam(message:discord.Message) -> typing.Literal[True]|None:
         )
     except discord.Forbidden:
         await globalLogMessage(f"Failed to timeout {message.author.id} for antispam")
-        return
+        return # don't delete messages and don't send an alert
 
     for msg in curInfo["messages"]:
         try:
@@ -1766,7 +1815,7 @@ globalPaused = False
 msgCommandMessages:dict[str,str]
 class antiSpamLastMessagesType(typing.TypedDict):
     messages:list[discord.Message]
-    contents:dict[int,list[str]]
+    contents:dict[int,list[str|bytes]]
 antiSpamLastMessages:dict[tuple[int,int],antiSpamLastMessagesType] = {}
 usageCooldownLastTriggered:dict[tuple[int,int|None],datetime.datetime] = {}
 msgCommandCooldownLastTriggered:dict[tuple[int|None,str],datetime.datetime] = {}

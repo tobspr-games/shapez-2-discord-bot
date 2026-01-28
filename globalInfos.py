@@ -56,7 +56,7 @@ ANTISPAM_DM_MSG = "\n".join([
     "It seems like your account got hacked.",
     "If you still have access to it, it is recommended to change your password as soon as possible.",
     "",
-    "\u2014 Shape Bot 2 from the Shapez 2 server"
+    "\u2014 ShapeBot 2 from the Shapez 2 server"
 ])
 
 # other

@@ -1,3 +1,15 @@
+## 28 Jan 26
+- Yet another antispam update :
+  - Only allow users to use the alert message buttons if they have the permission to do the action of the button
+  - Only disable the alert message buttons if the action was done successfully
+  - Don't send a text file in the alert message if the content is empty
+  - If a message doesn't have text content, use the images instead
+  - Don't run antispam if the message doesn't have text or images
+  - Use low threshold if the message only has images
+  - Reintroduce some text-content based conditions : Use low threshold if the message contains `@everyone` or `@here`
+  - Fix bot's name in antispam DM text
+- Fix typo in automessages
+
 ## 11 Jan 26
 - Lower antispam high threshold from 4 to 3
 

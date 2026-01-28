@@ -31,13 +31,13 @@ async def _debugMenuCheck(message:discord.Message) -> str|None:
     if len(message.attachments) != 1:
         return None
 
-    attachement = message.attachments[0]
+    attachment = message.attachments[0]
 
-    if attachement.size > globalInfos.MAX_DOWNLOAD_IMAGE_FILE_SIZE:
+    if attachment.size > globalInfos.MAX_DOWNLOAD_IMAGE_FILE_SIZE:
         return None
 
     try:
-        imageBytes = await attachement.read()
+        imageBytes = await attachment.read()
     except (discord.HTTPException,discord.NotFound):
         return None
 
