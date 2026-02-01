@@ -16,6 +16,7 @@ import io
 import typing
 import datetime
 import os
+import enum
 
 
 
@@ -982,6 +983,33 @@ async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> Non
 
     await accessBlueprintCommandFromMessage(interaction,message)
 
+async def pinMsgToPos(
+    message:discord.Message,
+    pos:int,
+    channel:discord.abc.Messageable,
+    user:discord.User
+) -> tuple[bool,str]:
+
+    pos -= 1
+    allPins = [m async for m in channel.pins(limit=None)]
+    moveMsgs = allPins[:pos]
+    reasonMsg = f"Request from {user.name}"
+
+    try:
+
+        for msg in moveMsgs:
+            await msg.unpin(reason=reasonMsg)
+
+        await message.pin(reason=reasonMsg)
+
+        for msg in reversed(moveMsgs):
+            await msg.pin(reason=reasonMsg)
+
+    except discord.Forbidden:
+        return False,"No permission to manage pins"
+
+    return True,""
+
 #endregion
 
 
@@ -1169,12 +1197,12 @@ def runDiscordBot() -> None:
 
 #region admin commands
 
-    class RegisterCommandType:
+    class RegisterCommandType(enum.Enum):
         SINGLE_CHANNEL = "singleChannel"
         ROLE_LIST = "roleList"
         BOOL_VALUE = "boolValue"
 
-    def registerAdminCommand(type_:str,cmdName:str,guildSettingsKey:str,cmdDesc:str="") -> None:
+    def registerAdminCommand(type_:RegisterCommandType,cmdName:str,guildSettingsKey:str,cmdDesc:str="") -> None:
 
         if type_ == RegisterCommandType.SINGLE_CHANNEL:
 
@@ -1327,6 +1355,113 @@ def runDiscordBot() -> None:
         else:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
         await interaction.response.send_message(responseMsg,ephemeral=True)
+
+    @tree.command(name="pin-msg",description=f"{globalInfos.ADMIN_ONLY_BADGE} Pins a message to the given position")
+    @discord.app_commands.describe(
+        message_id="ID of the message to pin",
+        position="Where to put the message in the pins list, 1-indexed"
+    )
+    async def pinMsgCommand(interaction:discord.Interaction,message_id:str,position:int) -> None:
+        if exitCommandWithoutResponse(interaction):
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        async def runCommand() -> None:
+            nonlocal responseMsg
+
+            if not await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
+                responseMsg = globalInfos.NO_PERMISSION_TEXT
+                return
+
+            try:
+                messageIdInt = int(message_id)
+            except ValueError:
+                responseMsg = "Message ID not an integer"
+                return
+
+            if position < 1:
+                responseMsg = "'position' must be at least 1"
+                return
+
+            try:
+                message = await interaction.channel.fetch_message(messageIdInt)
+            except discord.NotFound:
+                responseMsg = "Message not found"
+                return
+
+            if message.pinned:
+                responseMsg = "Message is already pinned"
+                return
+
+            success, responseMsg = await pinMsgToPos(
+                message,
+                position,
+                interaction.channel,
+                interaction.user
+            )
+            if success:
+                responseMsg = "Successfully pinned message"
+
+        responseMsg = ""
+        await runCommand()
+        await interaction.followup.send(responseMsg)
+
+    @tree.command(name="move-pinned-msg",description=f"{globalInfos.ADMIN_ONLY_BADGE} Moves a pinned message to the given position")
+    @discord.app_commands.describe(
+        from_position="The position in the pins list of the message to move, 1-indexed",
+        to_position="Where to move the message in the pins list, 1-indexed"
+    )
+    async def movePinnedMsgCommand(interaction:discord.Interaction,from_position:int,to_position:int) -> None:
+        if exitCommandWithoutResponse(interaction):
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        async def runCommand() -> None:
+            nonlocal responseMsg, from_position
+
+            if not await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
+                responseMsg = globalInfos.NO_PERMISSION_TEXT
+                return
+
+            if from_position < 1:
+                responseMsg = "'from_position' must be at least 1"
+                return
+            if to_position < 1:
+                responseMsg = "'to_position' must be at least 1"
+                return
+            if from_position == to_position:
+                responseMsg = "'from' and 'to' positions can't be the same"
+                return
+
+            allPins = [m async for m in interaction.channel.pins(limit=None)]
+            from_position -= 1
+
+            if from_position >= len(allPins):
+                responseMsg = "'from_position' is too big"
+                return
+
+            message = allPins[from_position]
+
+            try:
+                await message.unpin(reason=f"Request from {interaction.user.name}")
+            except discord.Forbidden:
+                responseMsg = "No permission to manage pins"
+                return
+
+            success, responseMsg = await pinMsgToPos(
+                message,
+                to_position,
+                interaction.channel,
+                interaction.user
+            )
+            if success:
+                responseMsg = "Successfully moved message"
+
+        responseMsg = ""
+        await runCommand()
+        await interaction.followup.send(responseMsg)
 
 #endregion
 

@@ -1,3 +1,7 @@
+## 01 Feb 26
+- Add /pin-msg
+- Add /move-pinned-msg
+
 ## 28 Jan 26
 - Yet another antispam update :
   - Only allow users to use the alert message buttons if they have the permission to do the action of the button

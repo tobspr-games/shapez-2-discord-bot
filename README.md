@@ -150,6 +150,11 @@ Important note : guild settings currently can't be modified so most of the comma
     - view : View the list
     - clear : Clears the list
 
+- Pins management :\
+  Add or move pins in the pinned messages list. Since when pinning messages they can only appear at the top of the list, this is done by first unpinning all messages above the wanted position, pinning the given message, then pinning back the previously removed messages. Positions given in these commands are 1-indexed and start from the top of the pins list.
+  - /pin-msg [message_id] [position] : Pins the message given by the ID to the position given. The position given will be the position of the given message once the operation is done.
+  - /move-pinned-msg [from_position] [to_position] : Moves a pinned message in the pins list. The 'to_position' will be the position of the moved message once the operation is done. The messages in between 'from' (excluded) and 'to' (included) are shifted by 1 position either up or down, i.e. this operation doesn't swap 'from' and 'to', except if they are next to each other.
+
 ### Owner commands
 
 - /global-pause : Pauses the bot globally
