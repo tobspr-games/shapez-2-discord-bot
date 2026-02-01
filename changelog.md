@@ -2,6 +2,8 @@
 - Add /pin-msg
 - Add /move-pinned-msg
 
+- Upgrade discord.py version to 2.6.4
+
 ## 28 Jan 26
 - Yet another antispam update :
   - Only allow users to use the alert message buttons if they have the permission to do the action of the button
