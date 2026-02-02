@@ -1,3 +1,6 @@
+## 02 Feb 26
+- Add /msg translation-issues
+
 ## 01 Feb 26
 - Add /pin-msg
 - Add /move-pinned-msg
