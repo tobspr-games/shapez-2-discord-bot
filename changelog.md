@@ -1,3 +1,6 @@
+## 07 Feb 26
+- Don't consider text between `{` and `}` as a potential shape code if it contains a new line
+
 ## 02 Feb 26
 - Add /msg translation-issues
 

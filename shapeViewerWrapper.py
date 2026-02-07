@@ -123,7 +123,8 @@ def renderShapes(message:str) -> RenderOutput:
         for split in row.split(SHAPE_CODE_OPENING)[1:]:
             if SHAPE_CODE_CLOSING in split:
                 potentialShapeCode = split.split(SHAPE_CODE_CLOSING)[0]
-                if potentialShapeCode != "":
+                # avoid considering parts that can't be shape codes
+                if (potentialShapeCode != "") and ("\n" not in potentialShapeCode):
                     potentialRowShapeCodes.append(potentialShapeCode)
         potentialShapeCodes.append(potentialRowShapeCodes)
 
