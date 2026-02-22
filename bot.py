@@ -1061,7 +1061,7 @@ def runDiscordBot() -> None:
             # shape viewer
             hasErrors, responseMsg, file = await useShapeViewer(message.content,False,message.author.id)
             if hasErrors:
-                await message.add_reaction(globalInfos.INVALID_SHAPE_CODE_REACTION)
+                await message.add_reaction(client.get_emoji(globalInfos.INVALID_SHAPE_CODE_REACTION))
             if (responseMsg != "") or (file is not None):
                 await message.channel.send(**getCommandResponse(responseMsg,file,message.guild,True))
 
@@ -1112,7 +1112,7 @@ def runDiscordBot() -> None:
             assert client.user is not None
             if client.user.mention in message.content:
                 try:
-                    await message.add_reaction(globalInfos.BOT_MENTIONED_REACTION)
+                    await message.add_reaction(client.get_emoji(globalInfos.BOT_MENTIONED_REACTION))
                 except discord.HTTPException:
                     pass
 

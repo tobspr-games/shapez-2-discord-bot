@@ -1,3 +1,6 @@
+## 22 Feb 26
+- Use custom emojis for invalid shape code and mention reactions
+
 ## 07 Feb 26
 - Don't consider text between `{` and `}` as a potential shape code if it contains a new line
 
