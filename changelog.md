@@ -1,3 +1,12 @@
+## 25 Feb 26
+- Add 'empty' to /msg all-shapes
+- Changes to `+struct` parameter :
+  - Add `c`, `m`, `y` as colors for layers 5, 6, 7
+  - Cycle colors instead of using the last one for layers above 7
+  - No longer allow manually adding colors to shapes
+  - Thus always run shape expansion when `+struct` is present
+- Remove redundant color check in shape code generator
+
 ## 22 Feb 26
 - Use custom emojis for invalid shape code and mention reactions
 

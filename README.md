@@ -40,7 +40,7 @@ Note : shapes with more than 4 layers and/or with more/less than 4 quadrants per
 
 Each parameter must have a `+` in front of it
 
-- +struct : Use `0` and `1` in your shape code and they will be replaced by nothing or a circle with the color depending on the layer
+- +struct : Each shape part must be inputted as a single character for its type. The part's color will depend on which layer it's in. Additionally, `0` will be replaced by `-` and `1` by `C` or `H`. This means that characters that are both a shape type and a color will always be interpreted as a shape type.
 - +fill :
   - If using quad shapes, for each layer : if it contains 1 quadrant -> that quadrant will be repeated 4 times, if 2 quadrants -> they will be repeated 2 times
   - If using hex shapes : 1 quadrant -> repeated 6 times, 2 -> 3, 3 -> 2
@@ -54,7 +54,7 @@ Note : `cut` and `qcut` are mutually exclusive
 
 ### Additional features
 
-- Shape expansion : Colorable shapes (like `C`) not followed by a color will have `u` appended (`Cu`), uncolorable shapes (like `P` or `-`) not followed by `-` will have `-` appended (`P-` or `--`)
+- Shape expansion : Colorable shapes (like `C`) not followed by a color will have `u` appended (`Cu`), uncolorable shapes (like `P` or `-`) not followed by `-` will have `-` appended (`P-` or `--`). Shape expansion will always be applied if using `+struct`
 - Shapes configuration guess : If the `+hex` parameter isn't present, the current shapes configuration (quad/hex) will be guessed based on the shape types given in the shape code
 
 No matter in which order you put your parameters in your shape code, they will be executed in the following order :\
@@ -163,7 +163,7 @@ Important note : guild settings currently can't be modified so most of the comma
 
 ## Additional message content related features
 
-- If the bot is mentioned, it should react with `:robot:`
+- If the bot is mentioned, it should react with its logo as an emoji (equivalent of a /ping)
 - If one (and only one) blueprint code is detected in a message and its attached files, the bot will send a message containing part of the /access-blueprint command response if the message is in a blueprints channel or one of its threads, otherwise it will react with the version of that blueprint
 - If a message contains one attachment and it's a screenshot containing the debug menu, the bot will send a message informing how to close that menu
 - If a message contains the hard milestone 8 first shape code, the bot will send a message informing how to create standalone pins

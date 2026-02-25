@@ -5,7 +5,7 @@ from shapez2 import gameObjects, ingameData, shapeCodes
 
 STRUCT_EMPTY_CHAR = "0"
 STRUCT_SHAPE_CHAR = "1"
-STRUCT_COLORS = ["r","g","b","w"]
+STRUCT_COLORS = ["r","g","b","w","c","m","y"]
 STRUCT_SHAPE = {
     ingameData.QUAD_SHAPES_CONFIG : "C",
     ingameData.HEX_SHAPES_CONFIG : "H"
@@ -21,7 +21,7 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[
     """Returns ``errorMsg``, (``[shape0,shape1,...]``, ``shapesConfig``) """
 
     def getStructColor(layer:int) -> str:
-        return STRUCT_COLORS[min(layer,len(STRUCT_COLORS)-1)]
+        return STRUCT_COLORS[layer%len(STRUCT_COLORS)]
 
     errorMsg = ""
     result = None
@@ -107,19 +107,24 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[
 
         # handle struct
         if structInParams:
-            for i,layer in enumerate(layers):
+            for layerIndex,layer in enumerate(layers):
                 newLayer = ""
-                color = getStructColor(i)
-                for char in layer:
+                for charIndex,char in enumerate(layer):
                     if char == STRUCT_SHAPE_CHAR:
-                        newLayer += STRUCT_SHAPE[curShapesConfig] + color
+                        newLayer += STRUCT_SHAPE[curShapesConfig]
                     elif char == STRUCT_EMPTY_CHAR:
-                        newLayer += shapeCodes.EMPTY_CHAR * 2
-                    else:
+                        newLayer += shapeCodes.EMPTY_CHAR
+                    elif char in curShapeParts+[shapeCodes.EMPTY_CHAR]:
                         newLayer += char
-                layers[i] = newLayer
+                    else:
+                        errorMsg = (
+                            "Colors not allowed when using 'struct' "
+                            + f"(layer {layerIndex+1} character {charIndex+1} : '{char}')"
+                        )
+                        return False
+                layers[layerIndex] = newLayer
 
-        # handle {C} -> {Cu} transformation
+        # handle shape expansion ({C} -> {Cu})
         for layerIndex,layer in enumerate(layers):
             newLayer = ""
             lastChar = len(layer)-1
@@ -131,7 +136,9 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[
                     continue
                 expand = False
                 isLastChar = charIndex == lastChar
-                if (
+                if structInParams:
+                    expand = True
+                elif (
                     (char in curColorableShapes)
                     and (isLastChar or (layer[charIndex+1] not in curColors))
                 ):
@@ -170,9 +177,6 @@ def generateShapeCodes(potentialShapeCode:str) -> tuple[
                     nextMustBeColor = char in curColorableShapes
                     shapeMode = False
                 else:
-                    if char not in (curColors+[shapeCodes.EMPTY_CHAR]):
-                        errorMsg += "must be a color or empty"
-                        return False
                     if nextMustBeColor and (char not in curColors):
                         errorMsg += "must be a color"
                         return False
