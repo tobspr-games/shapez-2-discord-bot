@@ -1,3 +1,6 @@
+## 11 Mar 26
+- Add /msg screenshot
+
 ## 25 Feb 26
 - Add 'empty' to /msg all-shapes
 - Changes to `+struct` parameter :
