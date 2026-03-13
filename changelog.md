@@ -1,3 +1,7 @@
+## 13 Mar 26
+- Update /msg sharebp for the new context menu commands interface
+- Add indicator that the response is loading when using the access blueprint logic from button components
+
 ## 11 Mar 26
 - Add /msg screenshot
 

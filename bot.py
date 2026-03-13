@@ -463,7 +463,7 @@ async def interactionErrorHandler(interaction:discord.Interaction,error:BaseExce
     await globalLogError()
     responseMsg = f"{globalInfos.UNKNOWN_ERROR_TEXT} ({error.__class__.__name__})"
     if interaction.response.is_done():
-        await interaction.followup.send(responseMsg)
+        await interaction.followup.send(responseMsg,ephemeral=True) # ephemeral required for button interactions
     else:
         await interaction.response.send_message(responseMsg,ephemeral=True)
 
@@ -895,16 +895,19 @@ def getAccessBPTextAndFiles(
 
 async def accessBlueprintCommandInnerPart(
     interaction:discord.Interaction,
-    getBPCode:typing.Coroutine[typing.Any,typing.Any,tuple[bool,str]]
+    getBPCode:typing.Coroutine[typing.Any,typing.Any,tuple[bool,str]],
+    manualLoadingText:bool
 ) -> None:
     if exitCommandWithoutResponse(interaction):
         return
 
     async def inner() -> None:
         nonlocal responseMsg, files
-        files = []
 
-        await interaction.response.defer(ephemeral=True)
+        if manualLoadingText:
+            await interaction.response.send_message("Loading...",ephemeral=True)
+        else:
+            await interaction.response.defer(ephemeral=True)
 
         if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
             responseMsg = globalInfos.NO_PERMISSION_TEXT
@@ -926,7 +929,10 @@ async def accessBlueprintCommandInnerPart(
     responseMsg = ""
     files = []
     await inner()
-    await interaction.followup.send(responseMsg,files=files,ephemeral=True) # ephemeral required for button interactions
+    if manualLoadingText:
+        await interaction.edit_original_response(content=responseMsg,attachments=files)
+    else:
+        await interaction.followup.send(responseMsg,files=files)
 
 async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None:
     potentialBPCodes = spz2.blueprints.getPotentialBPCodesInString(
@@ -936,7 +942,11 @@ async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None
         return None
     return potentialBPCodes[0]
 
-async def accessBlueprintCommandFromMessage(interaction:discord.Interaction,message:discord.Message) -> None:
+async def accessBlueprintCommandFromMessage(
+    interaction:discord.Interaction,
+    message:discord.Message,
+    manualLoadingText:bool
+) -> None:
 
     async def getBPCode() -> tuple[bool,str]:
         potentialBPCode = await getSinglePotentialBPCodeInMessage(message)
@@ -944,7 +954,7 @@ async def accessBlueprintCommandFromMessage(interaction:discord.Interaction,mess
             return False, "Message doesn't contain exactly one blueprint code"
         return True, potentialBPCode
 
-    await accessBlueprintCommandInnerPart(interaction,getBPCode())
+    await accessBlueprintCommandInnerPart(interaction,getBPCode(),manualLoadingText)
 
 class BPInfoMessageButtons(discord.ui.View):
     def __init__(self):
@@ -981,7 +991,7 @@ async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> Non
     else:
         message = msgRef.resolved
 
-    await accessBlueprintCommandFromMessage(interaction,message)
+    await accessBlueprintCommandFromMessage(interaction,message,True)
 
 async def pinMsgToPos(
     message:discord.Message,
@@ -1926,11 +1936,11 @@ def runDiscordBot() -> None:
         blueprint_file:discord.Attachment|None=None
     ) -> None:
 
-        await accessBlueprintCommandInnerPart(interaction,getBPFromStringOrFile(blueprint_code,blueprint_file))
+        await accessBlueprintCommandInnerPart(interaction,getBPFromStringOrFile(blueprint_code,blueprint_file),False)
 
     @tree.context_menu(name="access-blueprint")
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message):
-        await accessBlueprintCommandFromMessage(interaction,message)
+        await accessBlueprintCommandFromMessage(interaction,message,False)
 
 #endregion
 
