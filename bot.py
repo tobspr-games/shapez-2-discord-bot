@@ -965,33 +965,30 @@ class BPInfoMessageButtons(discord.ui.View):
             custom_id = "accessBP"
         ))
 
-async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> None:
-
-    assert interaction.message is not None
-    assert interaction.message.type == discord.MessageType.reply
-    assert isinstance(interaction.channel,discord.abc.Messageable)
-
-    msgRef = interaction.message.reference
-    assert msgRef is not None
-    assert msgRef.message_id is not None
-
-    async def notFound() -> None:
-        await interaction.response.send_message("Can't access original message",ephemeral=True)
-
+async def getMessageReply(message:discord.Message) -> discord.Message|None:
+    if message.type != discord.MessageType.reply:
+        return None
+    msgRef = message.reference
+    if msgRef is None:
+        return None
+    if msgRef.message_id is None:
+        return None
     if isinstance(msgRef.resolved,discord.DeletedReferencedMessage):
-        await notFound()
-        return
+        return None
+    if msgRef.resolved is not None:
+        return msgRef.resolved
+    try:
+        return await message.channel.fetch_message(msgRef.message_id)
+    except discord.NotFound:
+        return None
 
-    if msgRef.resolved is None:
-        try:
-            message = await interaction.channel.fetch_message(msgRef.message_id)
-        except discord.NotFound:
-            await notFound()
-            return
+async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> None:
+    assert interaction.message is not None
+    message = await getMessageReply(interaction.message)
+    if message is None:
+        await interaction.response.send_message("Can't access original message",ephemeral=True)
     else:
-        message = msgRef.resolved
-
-    await accessBlueprintCommandFromMessage(interaction,message,True)
+        await accessBlueprintCommandFromMessage(interaction,message,True)
 
 async def pinMsgToPos(
     message:discord.Message,
@@ -1019,6 +1016,22 @@ async def pinMsgToPos(
         return False,"No permission to manage pins"
 
     return True,""
+
+async def parseMessageId(messageId:str,channel:discord.abc.Messageable) -> str|discord.Message:
+    if len(messageId) > 25:
+        return "Message ID too long"
+    try:
+        messageIdInt = int(messageId)
+    except ValueError:
+        return "Message ID not an integer"
+    if messageIdInt < 0:
+        return "Message ID can't be negative"
+    try:
+        return await channel.fetch_message(messageIdInt)
+    except discord.Forbidden:
+        return "I can't read messages in this channel"
+    except discord.NotFound:
+        return "Message not found"
 
 #endregion
 
@@ -1384,20 +1397,14 @@ def runDiscordBot() -> None:
                 responseMsg = globalInfos.NO_PERMISSION_TEXT
                 return
 
-            try:
-                messageIdInt = int(message_id)
-            except ValueError:
-                responseMsg = "Message ID not an integer"
-                return
-
             if position < 1:
                 responseMsg = "'position' must be at least 1"
                 return
 
-            try:
-                message = await interaction.channel.fetch_message(messageIdInt)
-            except discord.NotFound:
-                responseMsg = "Message not found"
+            message = await parseMessageId(message_id,interaction.channel)
+
+            if isinstance(message,str):
+                responseMsg = message
                 return
 
             if message.pinned:
@@ -1939,8 +1946,49 @@ def runDiscordBot() -> None:
         await accessBlueprintCommandInnerPart(interaction,getBPFromStringOrFile(blueprint_code,blueprint_file),False)
 
     @tree.context_menu(name="access-blueprint")
-    async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message):
+    async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message) -> None:
         await accessBlueprintCommandFromMessage(interaction,message,False)
+
+    @tree.command(name="find-replies",description="Finds replies to a given message")
+    @discord.app_commands.describe(message_id="Look for replies to the message with this ID")
+    async def findRepliesCommand(interaction:discord.Interaction,message_id:str) -> None:
+        if exitCommandWithoutResponse(interaction):
+            return
+
+        async def runCommand() -> None:
+            nonlocal responseMsg
+
+            await interaction.response.defer(ephemeral=True)
+
+            if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
+                responseMsg = globalInfos.NO_PERMISSION_TEXT
+                return
+
+            assert isinstance(interaction.channel,discord.abc.Messageable)
+
+            message = await parseMessageId(message_id,interaction.channel)
+            if isinstance(message,str):
+                responseMsg = message
+                return
+
+            replies:list[discord.Message] = []
+
+            async for msg in message.channel.history(
+                limit=None,
+                before=message.created_at + datetime.timedelta(hours=24),
+                after=message
+            ):
+                if (await getMessageReply(msg)) == message:
+                    replies.append(msg)
+
+            if len(replies) == 0:
+                responseMsg = "Couldn't find any replies"
+            else:
+                responseMsg = "\n".join(f"- {m.jump_url}" for m in replies)
+
+        responseMsg = ""
+        await runCommand()
+        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
 
 #endregion
 

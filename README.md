@@ -112,6 +112,8 @@ If you have the blueprint code as text, select the 'blueprint' parameter and pas
 
 - /access-blueprint [blueprint=None] [blueprint_file=None] : Access a blueprint. To input a blueprint, use the 'blueprint' or 'blueprint_file' parameters or right click a message and select the 'access-blueprint' app command. The response will include blueprint infos like in /blueprint-info with 'advanced' set to false, a link to view the blueprint in [DontMash's 3D blueprint viewer](https://shapez.soren.codes/blueprint), as well as `txt` and `spz2bp` files containing the blueprint
 
+- /find-replies [message_id] : Searches in all messages sent up to 24 hours after the message given by 'message_id' for replies to that message.
+
 ### Admin commands
 
 Important note : guild settings currently can't be modified so most of the commands below won't have any effect
