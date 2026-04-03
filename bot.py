@@ -897,7 +897,8 @@ def getAccessBPTextAndFiles(
 async def accessBlueprintCommandInnerPart(
     interaction:discord.Interaction,
     getBPCode:typing.Coroutine[typing.Any,typing.Any,tuple[bool,str]],
-    manualLoadingText:bool
+    manualLoadingText:bool,
+    doubleRef:bool|None
 ) -> None:
     if exitCommandWithoutResponse(interaction):
         return
@@ -927,13 +928,17 @@ async def accessBlueprintCommandInnerPart(
 
         responseMsg, files = getAccessBPTextAndFiles(decodedBP,errorOrBP,interaction.guild,True)
 
+        if (doubleRef is not None) and (decodedBP.version < spz2.versions.LATEST_GAME_VERSION):
+            kwargs["view"] = UpdateBPMessageButton(doubleRef)
+
     responseMsg = ""
     files = []
+    kwargs = {}
     await inner()
     if manualLoadingText:
-        await interaction.edit_original_response(content=responseMsg,attachments=files)
+        await interaction.edit_original_response(content=responseMsg,attachments=files,**kwargs)
     else:
-        await interaction.followup.send(responseMsg,files=files)
+        await interaction.followup.send(responseMsg,files=files,**kwargs)
 
 async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None:
     potentialBPCodes = spz2.blueprints.getPotentialBPCodesInString(
@@ -946,7 +951,8 @@ async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None
 async def accessBlueprintCommandFromMessage(
     interaction:discord.Interaction,
     message:discord.Message,
-    manualLoadingText:bool
+    manualLoadingText:bool,
+    doubleRef:bool
 ) -> None:
 
     async def getBPCode() -> tuple[bool,str]:
@@ -955,9 +961,9 @@ async def accessBlueprintCommandFromMessage(
             return False, "Message doesn't contain exactly one blueprint code"
         return True, potentialBPCode
 
-    await accessBlueprintCommandInnerPart(interaction,getBPCode(),manualLoadingText)
+    await accessBlueprintCommandInnerPart(interaction,getBPCode(),manualLoadingText,doubleRef)
 
-class BPInfoMessageButtons(discord.ui.View):
+class BPInfoMessageButton(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.add_item(discord.ui.Button(
@@ -989,7 +995,7 @@ async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> Non
     if message is None:
         await interaction.response.send_message("Can't access original message",ephemeral=True)
     else:
-        await accessBlueprintCommandFromMessage(interaction,message,True)
+        await accessBlueprintCommandFromMessage(interaction,message,True,True)
 
 async def pinMsgToPos(
     message:discord.Message,
@@ -1033,6 +1039,73 @@ async def parseMessageId(messageId:str,channel:discord.abc.Messageable) -> str|d
         return "I can't read messages in this channel"
     except discord.NotFound:
         return "Message not found"
+
+class UpdateBPMessageButton(discord.ui.View):
+    def __init__(self,doubleRef:bool):
+        super().__init__()
+        self.add_item(discord.ui.Button(
+            label = "Update blueprint to the latest version",
+            style = discord.ButtonStyle.blurple,
+            custom_id = f"updateBP{"2" if doubleRef else "1"}"
+        ))
+
+async def updateBPMessageButtonInteraction(interaction:discord.Interaction,doubleRef:bool) -> None:
+
+    assert interaction.message is not None
+    await interaction.response.send_message("Loading...",ephemeral=True)
+
+    async def inner() -> tuple[bool,str]:
+
+        if doubleRef:
+
+            bpInfoMessage = await getMessageReply(interaction.message)
+            if bpInfoMessage is None:
+                return False, "Can't access blueprint info message"
+
+            bpMessage = await getMessageReply(bpInfoMessage)
+            if bpMessage is None:
+                return False, "Can't access original message"
+
+        else:
+
+            metadata = interaction.message.interaction_metadata
+            assert metadata is not None
+
+            if metadata.target_message is None:
+                msgId = metadata.target_message_id
+                assert msgId is not None
+                try:
+                    bpMessage = await interaction.channel.fetch_message(msgId)
+                except discord.NotFound:
+                    return False, "Can't access original message"
+            else:
+                bpMessage = metadata.target_message
+
+        potentialBP = await getSinglePotentialBPCodeInMessage(bpMessage)
+        if potentialBP is None:
+            return False, "Message doesn't contain exactly one blueprint code"
+
+        return updateBPLogic(potentialBP)
+
+    noErrors, responseMsg = await inner()
+    kwargs = getCommandResponse(
+        responseMsg,
+        None,
+        interaction.guild,
+        False,
+        ("```","```") if noErrors else ("","")
+    )
+    if "file" in kwargs:
+        kwargs["attachments"] = [kwargs.pop("file")]
+    if "content" not in kwargs:
+        kwargs["content"] = None
+    await interaction.edit_original_response(**kwargs)
+
+def updateBPLogic(blueprint:str) -> tuple[bool,str]:
+    try:
+        return True, spz2.blueprints.encodeBlueprint(spz2.blueprints.decodeBlueprint(blueprint,True))
+    except spz2.blueprints.BlueprintError as e:
+        return False, f"Error happened : {e}"
 
 #endregion
 
@@ -1158,7 +1231,7 @@ def runDiscordBot() -> None:
                         safenString(responseMsg),
                         files=files,
                         mention_author=False,
-                        view=BPInfoMessageButtons()
+                        view=BPInfoMessageButton()
                     )
                 except discord.HTTPException:
                     return
@@ -1205,6 +1278,8 @@ def runDiscordBot() -> None:
             await antispamAlertButtonInteraction(interaction,action.removeprefix("antispam-"))
         elif action == "accessBP":
             await bpInfoMessageButtonInteraction(interaction)
+        elif action in ("updateBP1","updateBP2"):
+            await updateBPMessageButtonInteraction(interaction,action[-1] == "2")
         else:
             assert interaction.message is not None
             await globalLogMessage(f"Unknown button action '{action}' for {interaction.message.jump_url}")
@@ -1588,11 +1663,7 @@ def runDiscordBot() -> None:
                 responseMsg = errorOrBP
                 return
 
-            try:
-                responseMsg = spz2.blueprints.encodeBlueprint(spz2.blueprints.decodeBlueprint(errorOrBP,True))
-                noErrors = True
-            except spz2.blueprints.BlueprintError as e:
-                responseMsg = f"Error happened : {e}"
+            noErrors, responseMsg = updateBPLogic(errorOrBP)
 
         responseMsg = ""
         noErrors = False
@@ -2005,11 +2076,16 @@ def runDiscordBot() -> None:
         blueprint_file:discord.Attachment|None=None
     ) -> None:
 
-        await accessBlueprintCommandInnerPart(interaction,getBPFromStringOrFile(blueprint_code,blueprint_file),False)
+        await accessBlueprintCommandInnerPart(
+            interaction,
+            getBPFromStringOrFile(blueprint_code,blueprint_file),
+            False,
+            None
+        )
 
     @tree.context_menu(name="access-blueprint")
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message) -> None:
-        await accessBlueprintCommandFromMessage(interaction,message,False)
+        await accessBlueprintCommandFromMessage(interaction,message,False,False)
 
     @tree.command(name="find-replies",description="Finds replies to a given message")
     @discord.app_commands.describe(message_id="Look for replies to the message with this ID")

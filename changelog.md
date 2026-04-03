@@ -1,3 +1,7 @@
+## 03 Apr 26
+- Add sus users functionality
+- Add update-blueprint to access-blueprint on old blueprints
+
 ## 21 Mar 26
 - Add /find-replies
 
