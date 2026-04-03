@@ -157,6 +157,10 @@ Important note : guild settings currently can't be modified so most of the comma
   - /pin-msg [message_id] [position] : Pins the message given by the ID to the position given. The position given will be the position of the given message once the operation is done.
   - /move-pinned-msg [from_position] [to_position] : Moves a pinned message in the pins list. The 'to_position' will be the position of the moved message once the operation is done. The messages in between 'from' (excluded) and 'to' (included) are shifted by 1 position either up or down, i.e. this operation doesn't swap 'from' and 'to', except if they are next to each other.
 
+- Sus users :\
+  Sus users are users which don't have a join message despite being in the server (currently an experiment)
+  - /sus-users : Display a list of all sus users
+
 ### Owner commands
 
 - /global-pause : Pauses the bot globally

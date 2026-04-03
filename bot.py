@@ -17,6 +17,7 @@ import typing
 import datetime
 import os
 import enum
+import aiohttp
 
 
 
@@ -1048,8 +1049,43 @@ def runDiscordBot() -> None:
     client = discord.Client(intents=intents,activity=discord.Game("shapez 2"))
     tree = discord.app_commands.CommandTree(client)
 
+    try:
+        with open(globalInfos.SECRETS_PATH) as f:
+            secrets = json.load(f)
+        botToken = secrets["bot_token"]
+        susUsersToken = secrets["sus_users_token"]
+        susUsersEndpoint = secrets["sus_users_endpoint"]
+    except FileNotFoundError:
+        botToken = os.getenv(globalInfos.BOT_TOKEN_ENV_VAR)
+        susUsersToken = os.getenv(globalInfos.SUS_USERS_TOKEN_ENV_VAR)
+        susUsersEndpoint = os.getenv(globalInfos.SUS_USERS_ENDPOINT_ENV_VAR)
+        if (botToken is None) or (susUsersToken is None) or (susUsersEndpoint is None):
+            raise Exception("Couldn't find secrets from file or environement variable")
+
     with open(globalInfos.MSG_COMMAND_MESSAGES_PATH,encoding="utf-8") as f:
         msgCommandMessages = json.load(f)
+
+    async def susUsersRequest(method:typing.Literal["get","put","delete"],path:str) -> typing.Any:
+
+        async with aiohttp.ClientSession(
+            susUsersEndpoint,
+            headers = {"Authorization" : f"Bearer {susUsersToken}"}
+        ) as session:
+
+            if method == "get":
+                func = session.get
+            elif method == "put":
+                func = session.put
+            elif method == "delete":
+                func = session.delete
+            else:
+                raise ValueError
+
+            async with func(path) as response:
+                assert response.status == 200
+                content = await response.json()
+
+        return content
 
     @client.event
     async def on_ready() -> None:
@@ -1153,6 +1189,13 @@ def runDiscordBot() -> None:
                         except discord.HTTPException:
                             pass
 
+        # sus users
+        if (
+            (message.type == discord.MessageType.new_member)
+            and (await hasPermission(PermissionLvls.PRIVATE_FEATURE,message=message))
+        ):
+            assert (await susUsersRequest("delete",str(message.author.id))).get("success") is True
+
     @client.event
     async def on_interaction(interaction:discord.Interaction) -> None:
         if interaction.type != discord.InteractionType.component:
@@ -1165,6 +1208,10 @@ def runDiscordBot() -> None:
         else:
             assert interaction.message is not None
             await globalLogMessage(f"Unknown button action '{action}' for {interaction.message.jump_url}")
+
+    @client.event
+    async def on_member_join(member:discord.Member) -> None:
+        assert (await susUsersRequest("put",str(member.id))).get("success") is True
 
     @tree.error
     async def treeError(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
@@ -1479,6 +1526,21 @@ def runDiscordBot() -> None:
         responseMsg = ""
         await runCommand()
         await interaction.followup.send(responseMsg)
+
+    @tree.command(name="sus-users",description=f"{globalInfos.ADMIN_ONLY_BADGE} View users that don't have a join message")
+    async def susUsersCommand(interaction:discord.Interaction) -> None:
+        if exitCommandWithoutResponse(interaction):
+            return
+        await interaction.response.defer(ephemeral=True)
+        if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
+            users:list[dict[str,str]] = await susUsersRequest("get","")
+            if len(users) == 0:
+                responseMsg = "No sus users"
+            else:
+                responseMsg = " ".join(f"<@{u["userId"]}>" for u in users)
+        else:
+            responseMsg = globalInfos.NO_PERMISSION_TEXT
+        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
 
 #endregion
 
@@ -1994,14 +2056,7 @@ def runDiscordBot() -> None:
 
 
 
-    try:
-        with open(globalInfos.TOKEN_PATH) as f:
-            token = f.read()
-    except FileNotFoundError:
-        token = os.getenv(globalInfos.TOKEN_ENV_VAR)
-        if token is None:
-            raise Exception("Couldn't find token from file or environement variable")
-    client.run(token)
+    client.run(botToken)
 
 executedOnReady = False
 globalPaused = False
