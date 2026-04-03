@@ -1238,7 +1238,8 @@ def runDiscordBot() -> None:
                 reactedToBPCodeInMsg = True
             await bpInfoMessageLogic()
 
-        if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
+        reactionPerm = publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message))
+        if reactionPerm:
 
             # equivalent of a /ping
             assert client.user is not None
@@ -1265,7 +1266,10 @@ def runDiscordBot() -> None:
         # sus users
         if (
             (message.type == discord.MessageType.new_member)
-            and (await hasPermission(PermissionLvls.PRIVATE_FEATURE,message=message))
+            and (
+                reactionPerm
+                or (await hasPermission(PermissionLvls.PRIVATE_FEATURE,message=message))
+            )
         ):
             assert (await susUsersRequest("delete",str(message.author.id))).get("success") is True
 
