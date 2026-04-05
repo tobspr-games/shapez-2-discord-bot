@@ -1292,6 +1292,11 @@ def runDiscordBot() -> None:
     async def on_member_join(member:discord.Member) -> None:
         assert (await susUsersRequest("put",str(member.id))).get("success") is True
 
+    @client.event
+    async def on_raw_member_remove(payload:discord.RawMemberRemoveEvent) -> None:
+        # no errors if the user wasn't in the list
+        assert (await susUsersRequest("delete",str(payload.user.id))).get("success") is True
+
     @tree.error
     async def treeError(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
         assert error.__cause__ is not None

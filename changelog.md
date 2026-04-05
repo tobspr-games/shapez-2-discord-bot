@@ -1,3 +1,6 @@
+## 05 Apr 26
+- Remove user from sus users list when it leaves the server
+
 ## 04 Apr 26
 - Add /msg achievements
 
