@@ -1138,7 +1138,7 @@ def runDiscordBot() -> None:
     with open(globalInfos.MSG_COMMAND_MESSAGES_PATH,encoding="utf-8") as f:
         msgCommandMessages = json.load(f)
 
-    async def susUsersRequest(method:typing.Literal["get","put","delete"],path:str) -> typing.Any:
+    async def susUsersRequest(method:typing.Literal["get","put","delete"],path:str) -> tuple[bool,typing.Any]:
 
         async with aiohttp.ClientSession(
             susUsersEndpoint,
@@ -1155,10 +1155,14 @@ def runDiscordBot() -> None:
                 raise ValueError
 
             async with func(path) as response:
-                assert response.status == 200
+
                 content = await response.json()
 
-        return content
+                if response.status == 200:
+                    return True, content
+
+                await globalLogMessage(f"Failed sus users request ({response.status}) : {method} '{path}' {content}")
+                return False, None
 
     @client.event
     async def on_ready() -> None:
@@ -1271,7 +1275,9 @@ def runDiscordBot() -> None:
                 or (await hasPermission(PermissionLvls.PRIVATE_FEATURE,message=message))
             )
         ):
-            assert (await susUsersRequest("delete",str(message.author.id))).get("success") is True
+            success, response = await susUsersRequest("delete",str(message.author.id))
+            if success:
+                assert response.get("success") is True
 
     @client.event
     async def on_interaction(interaction:discord.Interaction) -> None:
@@ -1290,12 +1296,16 @@ def runDiscordBot() -> None:
 
     @client.event
     async def on_member_join(member:discord.Member) -> None:
-        assert (await susUsersRequest("put",str(member.id))).get("success") is True
+        success, response = await susUsersRequest("put",str(member.id))
+        if success:
+            assert response.get("success") is True
 
     @client.event
     async def on_raw_member_remove(payload:discord.RawMemberRemoveEvent) -> None:
         # no errors if the user wasn't in the list
-        assert (await susUsersRequest("delete",str(payload.user.id))).get("success") is True
+        success, response = await susUsersRequest("delete",str(payload.user.id))
+        if success:
+            assert response.get("success") is True
 
     @tree.error
     async def treeError(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
@@ -1617,11 +1627,15 @@ def runDiscordBot() -> None:
             return
         await interaction.response.defer(ephemeral=True)
         if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
-            users:list[dict[str,str]] = await susUsersRequest("get","")
-            if len(users) == 0:
-                responseMsg = "No sus users"
+            success, response = await susUsersRequest("get","")
+            if success:
+                users:list[dict[str,str]] = response
+                if len(users) == 0:
+                    responseMsg = "No sus users"
+                else:
+                    responseMsg = " ".join(f"<@{u["userId"]}>" for u in users)
             else:
-                responseMsg = " ".join(f"<@{u["userId"]}>" for u in users)
+                responseMsg = "Database request failed"
         else:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
         await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
