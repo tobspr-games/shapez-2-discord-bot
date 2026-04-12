@@ -1640,6 +1640,22 @@ def runDiscordBot() -> None:
             responseMsg = globalInfos.NO_PERMISSION_TEXT
         await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
 
+    @tree.command(name="remove-sus-user",description=f"{globalInfos.ADMIN_ONLY_BADGE} Manually mark the specified user as not sus")
+    async def susUsersCommand(interaction:discord.Interaction,user:discord.User) -> None:
+        if exitCommandWithoutResponse(interaction):
+            return
+        await interaction.response.defer(ephemeral=True)
+        if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
+            success, response = await susUsersRequest("delete",str(user.id))
+            if success:
+                assert response.get("success") is True
+                responseMsg = f"{user.mention} removed from the sus users list"
+            else:
+                responseMsg = "Database request failed"
+        else:
+            responseMsg = globalInfos.NO_PERMISSION_TEXT
+        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
+
 #endregion
 
 

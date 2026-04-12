@@ -160,6 +160,7 @@ Important note : guild settings currently can't be modified so most of the comma
 - Sus users :\
   Sus users are users which don't have a join message despite being in the server (currently an experiment)
   - /sus-users : Display a list of all sus users
+  - /remove-sus-user [user] : Remove the specified user from the sus users list
 
 ### Owner commands
 

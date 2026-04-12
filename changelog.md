@@ -1,3 +1,6 @@
+## 13 Apr 26
+- Add /remove-sus-user
+
 ## 10 Apr 26
 - Upgrade discord.py version to 2.7.1
 - Add error handling to sus users requests
