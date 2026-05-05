@@ -1156,12 +1156,12 @@ def runDiscordBot() -> None:
 
             async with func(path) as response:
 
-                content = await response.json()
-
                 if response.status == 200:
-                    return True, content
+                    contentJSON = await response.json()
+                    return True, contentJSON
 
-                await globalLogMessage(f"Failed sus users request ({response.status}) : {method} '{path}' {content}")
+                contentText = await response.text()
+                await globalLogMessage(f"Failed sus users request ({response.status}) : {method} '{path}' {contentText}")
                 return False, None
 
     @client.event

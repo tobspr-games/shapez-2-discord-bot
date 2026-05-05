@@ -1,3 +1,6 @@
+## 05 May 26
+- Fix sus users error handling
+
 ## 13 Apr 26
 - Add /remove-sus-user
 
