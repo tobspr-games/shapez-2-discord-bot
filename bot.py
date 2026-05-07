@@ -1629,6 +1629,7 @@ def runDiscordBot() -> None:
         if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
             success, response = await susUsersRequest("get","")
             if success:
+                assert isinstance(response,list)
                 users:list[dict[str,str]] = response
                 if len(users) == 0:
                     responseMsg = "No sus users"

@@ -1,3 +1,6 @@
+## 07 May 26
+- Add license
+
 ## 05 May 26
 - Fix sus users error handling
 
