@@ -1,3 +1,7 @@
+## 25 Jun 26
+- Add /msg achievements-error
+- Remove /msg achievements
+
 ## 07 May 26
 - Add license
 
