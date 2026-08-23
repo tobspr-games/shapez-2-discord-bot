@@ -38,7 +38,7 @@ Note : shapes with more than 4 layers and/or with more/less than 4 quadrants per
 
 ### Parameters
 
-Each parameter must have a `+` in front of it
+Parameters must be put after the shape code (but still inside the `{}`) and each one must have a `+` in front of it.
 
 - +struct : Each shape part must be inputted as a single character for its type. The part's color will depend on which layer it's in. Additionally, `0` will be replaced by `-` and `1` by `C` or `H`. This means that characters that are both a shape type and a color will always be interpreted as a shape type.
 - +fill :
@@ -62,7 +62,7 @@ lfill, shapes config guess, struct, shape expansion, fill, lsep, cut/qcut
 
 ### Display parameters
 
-Display parameters must be put outside of the `{}`, have a `/` in front of them and have a `:` separating the parameter name from the value (if there is one)
+Display parameters have a `/` in front of them and a `:` separating the parameter name from the value (if there is one). They can be put anywhere in the message, except inside `{}`, and affect all rendered shapes in the message.
 
 - /size:80 : Will control the width and height in pixels of each shape (default:56, min:10, max:100)
 - /spoiler : Will mark the resulting image as spoiler
@@ -156,11 +156,6 @@ Important note : guild settings currently can't be modified so most of the comma
   Add or move pins in the pinned messages list. Since when pinning messages they can only appear at the top of the list, this is done by first unpinning all messages above the wanted position, pinning the given message, then pinning back the previously removed messages. Positions given in these commands are 1-indexed and start from the top of the pins list.
   - /pin-msg [message_id] [position] : Pins the message given by the ID to the position given. The position given will be the position of the given message once the operation is done.
   - /move-pinned-msg [from_position] [to_position] : Moves a pinned message in the pins list. The 'to_position' will be the position of the moved message once the operation is done. The messages in between 'from' (excluded) and 'to' (included) are shifted by 1 position either up or down, i.e. this operation doesn't swap 'from' and 'to', except if they are next to each other.
-
-- Sus users :\
-  Sus users are users which don't have a join message despite being in the server (currently an experiment)
-  - /sus-users : Display a list of all sus users
-  - /remove-sus-user [user] : Remove the specified user from the sus users list
 
 ### Owner commands
 

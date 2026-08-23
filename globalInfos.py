@@ -1,8 +1,6 @@
 # bot itself
 SECRETS_PATH = "./secrets.json"
 BOT_TOKEN_ENV_VAR = "fsb2_token"
-SUS_USERS_TOKEN_ENV_VAR = "sus_users_token"
-SUS_USERS_ENDPOINT_ENV_VAR = "sus_users_endpoint"
 
 # owner only features
 OWNER_USERS = [579288989505421349]

@@ -1,3 +1,10 @@
+## 23 Aug 26
+- Add defer to antispam buttons
+- Reword some texts in readme
+- Fix defer for 'access blueprint' and 'update blueprint' buttons
+- Remove sus users functionality
+- Remove /msg achievements-error
+
 ## 25 Jun 26
 - Add /msg achievements-error
 - Remove /msg achievements

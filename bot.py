@@ -17,7 +17,6 @@ import typing
 import datetime
 import os
 import enum
-import aiohttp
 
 
 
@@ -519,6 +518,8 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
     userIdInt = int(userId)
     interactingUserPerms = interaction.channel.permissions_for(interaction.user)
 
+    await interaction.response.defer(ephemeral=True,thinking=True)
+
     try:
         user = await interaction.guild.fetch_member(userIdInt)
     except (discord.Forbidden,discord.NotFound):
@@ -572,7 +573,7 @@ async def antispamAlertButtonInteraction(interaction:discord.Interaction,rawActi
     else:
         raise ValueError(f"Unknown antispam action : {action}")
 
-    await interaction.response.send_message(responseMsg,ephemeral=True)
+    await interaction.followup.send(responseMsg)
     buttonStates = "".join("0" if i in disableIndexes else state for i,state in enumerate(buttonStates))
     await interaction.message.edit(view=AntispamAlertButtons(userIdInt,thresholdLevel,buttonStates))
 
@@ -897,7 +898,6 @@ def getAccessBPTextAndFiles(
 async def accessBlueprintCommandInnerPart(
     interaction:discord.Interaction,
     getBPCode:typing.Coroutine[typing.Any,typing.Any,tuple[bool,str]],
-    manualLoadingText:bool,
     doubleRef:bool|None
 ) -> None:
     if exitCommandWithoutResponse(interaction):
@@ -906,10 +906,7 @@ async def accessBlueprintCommandInnerPart(
     async def inner() -> None:
         nonlocal responseMsg, files
 
-        if manualLoadingText:
-            await interaction.response.send_message("Loading...",ephemeral=True)
-        else:
-            await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=True,thinking=True)
 
         if not await hasPermission(PermissionLvls.PRIVATE_FEATURE,interaction=interaction):
             responseMsg = globalInfos.NO_PERMISSION_TEXT
@@ -935,10 +932,7 @@ async def accessBlueprintCommandInnerPart(
     files = []
     kwargs = {}
     await inner()
-    if manualLoadingText:
-        await interaction.edit_original_response(content=responseMsg,attachments=files,**kwargs)
-    else:
-        await interaction.followup.send(responseMsg,files=files,**kwargs)
+    await interaction.followup.send(responseMsg,files=files,**kwargs)
 
 async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None:
     potentialBPCodes = spz2.blueprints.getPotentialBPCodesInString(
@@ -951,7 +945,6 @@ async def getSinglePotentialBPCodeInMessage(message:discord.Message) -> str|None
 async def accessBlueprintCommandFromMessage(
     interaction:discord.Interaction,
     message:discord.Message,
-    manualLoadingText:bool,
     doubleRef:bool
 ) -> None:
 
@@ -961,7 +954,7 @@ async def accessBlueprintCommandFromMessage(
             return False, "Message doesn't contain exactly one blueprint code"
         return True, potentialBPCode
 
-    await accessBlueprintCommandInnerPart(interaction,getBPCode(),manualLoadingText,doubleRef)
+    await accessBlueprintCommandInnerPart(interaction,getBPCode(),doubleRef)
 
 class BPInfoMessageButton(discord.ui.View):
     def __init__(self):
@@ -995,7 +988,7 @@ async def bpInfoMessageButtonInteraction(interaction:discord.Interaction) -> Non
     if message is None:
         await interaction.response.send_message("Can't access original message",ephemeral=True)
     else:
-        await accessBlueprintCommandFromMessage(interaction,message,True,True)
+        await accessBlueprintCommandFromMessage(interaction,message,True)
 
 async def pinMsgToPos(
     message:discord.Message,
@@ -1052,7 +1045,7 @@ class UpdateBPMessageButton(discord.ui.View):
 async def updateBPMessageButtonInteraction(interaction:discord.Interaction,doubleRef:bool) -> None:
 
     assert interaction.message is not None
-    await interaction.response.send_message("Loading...",ephemeral=True)
+    await interaction.response.defer(ephemeral=True,thinking=True)
 
     async def inner() -> tuple[bool,str]:
 
@@ -1095,11 +1088,7 @@ async def updateBPMessageButtonInteraction(interaction:discord.Interaction,doubl
         False,
         ("```","```") if noErrors else ("","")
     )
-    if "file" in kwargs:
-        kwargs["attachments"] = [kwargs.pop("file")]
-    if "content" not in kwargs:
-        kwargs["content"] = None
-    await interaction.edit_original_response(**kwargs)
+    await interaction.followup.send(**kwargs)
 
 def updateBPLogic(blueprint:str) -> tuple[bool,str]:
     try:
@@ -1126,43 +1115,13 @@ def runDiscordBot() -> None:
         with open(globalInfos.SECRETS_PATH) as f:
             secrets = json.load(f)
         botToken = secrets["bot_token"]
-        susUsersToken = secrets["sus_users_token"]
-        susUsersEndpoint = secrets["sus_users_endpoint"]
     except FileNotFoundError:
         botToken = os.getenv(globalInfos.BOT_TOKEN_ENV_VAR)
-        susUsersToken = os.getenv(globalInfos.SUS_USERS_TOKEN_ENV_VAR)
-        susUsersEndpoint = os.getenv(globalInfos.SUS_USERS_ENDPOINT_ENV_VAR)
-        if (botToken is None) or (susUsersToken is None) or (susUsersEndpoint is None):
+        if botToken is None:
             raise Exception("Couldn't find secrets from file or environement variable")
 
     with open(globalInfos.MSG_COMMAND_MESSAGES_PATH,encoding="utf-8") as f:
         msgCommandMessages = json.load(f)
-
-    async def susUsersRequest(method:typing.Literal["get","put","delete"],path:str) -> tuple[bool,typing.Any]:
-
-        async with aiohttp.ClientSession(
-            susUsersEndpoint,
-            headers = {"Authorization" : f"Bearer {susUsersToken}"}
-        ) as session:
-
-            if method == "get":
-                func = session.get
-            elif method == "put":
-                func = session.put
-            elif method == "delete":
-                func = session.delete
-            else:
-                raise ValueError
-
-            async with func(path) as response:
-
-                if response.status == 200:
-                    contentJSON = await response.json()
-                    return True, contentJSON
-
-                contentText = await response.text()
-                await globalLogMessage(f"Failed sus users request ({response.status}) : {method} '{path}' {contentText}")
-                return False, None
 
     @client.event
     async def on_ready() -> None:
@@ -1242,8 +1201,7 @@ def runDiscordBot() -> None:
                 reactedToBPCodeInMsg = True
             await bpInfoMessageLogic()
 
-        reactionPerm = publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message))
-        if reactionPerm:
+        if publicPerm or (await hasPermission(PermissionLvls.REACTION,message=message)):
 
             # equivalent of a /ping
             assert client.user is not None
@@ -1267,18 +1225,6 @@ def runDiscordBot() -> None:
                         except discord.HTTPException:
                             pass
 
-        # sus users
-        if (
-            (message.type == discord.MessageType.new_member)
-            and (
-                reactionPerm
-                or (await hasPermission(PermissionLvls.PRIVATE_FEATURE,message=message))
-            )
-        ):
-            success, response = await susUsersRequest("delete",str(message.author.id))
-            if success:
-                assert response.get("success") is True
-
     @client.event
     async def on_interaction(interaction:discord.Interaction) -> None:
         if interaction.type != discord.InteractionType.component:
@@ -1293,19 +1239,6 @@ def runDiscordBot() -> None:
         else:
             assert interaction.message is not None
             await globalLogMessage(f"Unknown button action '{action}' for {interaction.message.jump_url}")
-
-    @client.event
-    async def on_member_join(member:discord.Member) -> None:
-        success, response = await susUsersRequest("put",str(member.id))
-        if success:
-            assert response.get("success") is True
-
-    @client.event
-    async def on_raw_member_remove(payload:discord.RawMemberRemoveEvent) -> None:
-        # no errors if the user wasn't in the list
-        success, response = await susUsersRequest("delete",str(payload.user.id))
-        if success:
-            assert response.get("success") is True
 
     @tree.error
     async def treeError(interaction:discord.Interaction,error:discord.app_commands.AppCommandError) -> None:
@@ -1620,42 +1553,6 @@ def runDiscordBot() -> None:
         responseMsg = ""
         await runCommand()
         await interaction.followup.send(responseMsg)
-
-    @tree.command(name="sus-users",description=f"{globalInfos.ADMIN_ONLY_BADGE} View users that don't have a join message")
-    async def susUsersCommand(interaction:discord.Interaction) -> None:
-        if exitCommandWithoutResponse(interaction):
-            return
-        await interaction.response.defer(ephemeral=True)
-        if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
-            success, response = await susUsersRequest("get","")
-            if success:
-                assert isinstance(response,list)
-                users:list[dict[str,str]] = response
-                if len(users) == 0:
-                    responseMsg = "No sus users"
-                else:
-                    responseMsg = " ".join(f"<@{u["userId"]}>" for u in users)
-            else:
-                responseMsg = "Database request failed"
-        else:
-            responseMsg = globalInfos.NO_PERMISSION_TEXT
-        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
-
-    @tree.command(name="remove-sus-user",description=f"{globalInfos.ADMIN_ONLY_BADGE} Manually mark the specified user as not sus")
-    async def susUsersCommand(interaction:discord.Interaction,user:discord.User) -> None:
-        if exitCommandWithoutResponse(interaction):
-            return
-        await interaction.response.defer(ephemeral=True)
-        if await hasPermission(PermissionLvls.ADMIN,interaction=interaction):
-            success, response = await susUsersRequest("delete",str(user.id))
-            if success:
-                assert response.get("success") is True
-                responseMsg = f"{user.mention} removed from the sus users list"
-            else:
-                responseMsg = "Database request failed"
-        else:
-            responseMsg = globalInfos.NO_PERMISSION_TEXT
-        await interaction.followup.send(**getCommandResponse(responseMsg,None,interaction.guild,False))
 
 #endregion
 
@@ -2119,13 +2016,12 @@ def runDiscordBot() -> None:
         await accessBlueprintCommandInnerPart(
             interaction,
             getBPFromStringOrFile(blueprint_code,blueprint_file),
-            False,
             None
         )
 
     @tree.context_menu(name="access-blueprint")
     async def accessBlueprintContextMenu(interaction:discord.Interaction,message:discord.Message) -> None:
-        await accessBlueprintCommandFromMessage(interaction,message,False,False)
+        await accessBlueprintCommandFromMessage(interaction,message,False)
 
     @tree.command(name="find-replies",description="Finds replies to a given message")
     @discord.app_commands.describe(message_id="Look for replies to the message with this ID")
